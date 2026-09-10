@@ -1,174 +1,115 @@
-# Projeto DieHoward
-
+# Projeto dieHoward
 
 ## 1. Sobre
 
-**DieHoward** é o nome que dei ao meu núcleo de processamento de texto/áudio baseado em IA. 
+**dieHoward** é o nome do núcleo de processamento de texto/áudio baseado em IA que estou desenvolvendo.
 
-A ideia do projeto é transformar livros e textos em uma experiência de áudio confortável, funcionando como sistema local de conversão de texto em fala. Meu objetivo é evitar depender de APIs pagas ou serviços externos sempre que possível. Quero utilizar **modelos locais e software open source**, principalmente porque pretendo processar textos longos.
-O projeto ainda está em desenvolvimento, então algumas decisões de arquitetura podem mudar.
+A ideia do projeto é transformar livros e textos extensos em uma experiência de áudio confortável e natural, funcionando como um sistema local de conversão de texto em fala (TTS). O objetivo principal é evitar a dependência de APIs pagas ou serviços em nuvem. Utilizo **modelos locais e software open source**, desenhados especificamente para lidar com o processamento pesado de textos longos.
 
-### Origem do Nome:
-O nome veio em homenagem a um monólogo do filme "Pearl" (2022) onde a atriz Mia Goth interpreta magistralmente um monólogo de mais de oito minutos, em que simula uma conversa dissecante com seu marido Howard.
+### Origem do Nome
 
-> ["Howard... Eu te odeio tanto por me deixar aqui, às vezes espero que você morra. Sinto muito. Sinto-me péssimo admitindo isso, mas é a verdade. "](https://youtu.be/kj8UiWw2lxg)
+O nome nasceu como uma homenagem a um monólogo do filme *Pearl* (2022), no qual a atriz Mia Goth interpreta magistralmente uma conversa dissecante com seu marido, Howard, por mais de oito minutos.
 
-Este texto serviu de base para rastrear a evolução do projeto. Afinal ele expôs os principais desafios: o ritmo, a entonação e a pronúncia de palavras estrangeiras, como 'Howard'. Tal qual a Pearl espera que Howard morra, eu espero que os problema da pronúncia também morra, por isso "DieHoward".
+> *"Howard... Eu te odeio tanto por me deixar aqui, às vezes espero que você morra. Sinto muito. Sinto-me péssimo admitindo isso, mas é a verdade."* — [Trecho do Monólogo](https://youtu.be/kj8UiWw2lxg)
 
-## 2. Objetivo
+Este texto serviu de *benchmark* (base de testes) para rastrear a evolução do projeto. Ele expôs os desafios mais difíceis da síntese de voz: o ritmo, a entonação emotiva e a pronúncia de palavras estrangeiras como "Howard". Tal qual a Pearl espera que Howard morra, eu espero que o problema da pronúncia robótica também morra — por isso, **dieHoward**.
 
-O objetivo é criar um sistema que consiga:
+---
 
-1. Receber um livro ou texto.
-2. Processar o conteúdo.
-3. Identificar e organizar os trechos.
-4. Transformar o texto em fala.
-5. Gerar arquivos de áudio.
-6. Permitir que eu escute o resultado confortavelmente, inclusive durante deslocamentos, como no ônibus.
+## 2. Hardware, Ambiente e Filosofia
 
-No futuro, quero que o sistema seja mais inteligente do que simplesmente mandar o texto inteiro para um TTS.
+O DieHoward é guiado por uma filosofia estrita de desenvolvimento:
 
-Por exemplo, ele poderia entender melhor:
+* **Local, barato e open source** (sempre que possível).
+* **Modular e extensível.**
+* **Relativamente leve**, priorizando custo computacional acessível.
+* **Independente de APIs proprietárias.**
 
-* capítulos;
-* parágrafos;
-* diálogos;
-* nomes próprios;
-* citações;
-* diferentes idiomas;
-* pontuação;
-* pausas;
-* ritmo;
-* entonação.
+### Ambiente de Desenvolvimento
 
-## 3. TTS atual
+* **SO:** Linux Mint
+* **CPU:** AMD Ryzen 5 3400G
+* **GPU Integrada:** Radeon Vega Graphics
 
-Atualmente estou usando **Piper TTS**.
+**Premissa de Engenharia:** Não se deve presumir a existência de uma GPU moderna com grande quantidade de VRAM. Toda solução implementada deve levar em conta o custo computacional e rodar satisfatoriamente em configurações modestas.
 
-Estou utilizando uma voz em português:
+---
 
-`pt_BR-faber-medium.onnx`
+## 3. Estado Atual: O Motor TTS
 
-Tenho chamado o Piper a partir de Python utilizando `subprocess`.
-
-Um exemplo da ideia do código é:
+Atualmente, o projeto utiliza o **Piper TTS**, rodando o modelo acústico `pt_BR-faber-medium.onnx`. A integração é feita via Python utilizando `subprocess`.
 
 ```python
+import subprocess
+
 subprocess.run([
     "piper",
     "--model", "pt_BR-faber-medium.onnx",
     "--output_file", "output.wav",
     "--length_scale", "1.60"
 ])
+
 ```
 
-Eu aumentei o `length_scale` porque a leitura padrão estava rápida demais.
+O `length_scale` foi ajustado porque a leitura padrão do modelo era excessivamente rápida. Embora o Piper entregue uma voz muito mais natural que sistemas TTS antigos, encontramos barreiras estruturais significativas, listadas a seguir.
 
-O resultado do Piper é mais natural do que uma voz extremamente robótica, mas ainda existem problemas importantes.
+### Problemas Mapeados:
 
-## 4. Problemas que já encontrei
+1. **Ritmo Linear:** O motor percorre as palavras em sequência, ignorando a dinâmica de pausas reais e ênfases de diálogo.
+2. **Estrangeirismos:** Nomes em inglês (como *Howard*) quebram o conversor grafêmico do modelo em português.
+3. **Anomalias Fonéticas (O Backend espeak-ng):** A conversão de certos dígrafos e sons nasais no Piper pt-BR gera áudios robóticos, soletração de caracteres (fallback) ou oclusões abafadas.
 
-### Velocidade
+---
 
-A leitura padrão estava rápida demais.
+## 4. Engenharia Acústico-Fonética
 
-Consegui diminuir a velocidade utilizando `--length_scale`, mas quero encontrar uma maneira melhor de controlar o ritmo.
+Para resolver as falhas fonéticas do modelo `pt_BR-faber-medium` sem ter que treinar a rede neural do zero, o DieHoward implementa um sistema de **Transliteração Ortográfica Guiada (Guided Orthographic Transliteration)**.
 
-### Ritmo
+Como o motor G2P (*Grafo-Fonêmico*) nativo do Piper é baseado no `espeak-ng` — que rejeita símbolos fonéticos IPA complexos para o português —, nós manipulamos a rede acústica deformando a grafia das palavras antes que elas cheguem ao sintetizador.
 
-O maior problema atualmente é que a voz não possui um ritmo muito natural.
+### 4.1. Resolução de Dígrafos Palatais (O Hack do Hífen e Dupla Consoante)
 
-Ela consegue pronunciar o texto, mas às vezes parece estar simplesmente percorrendo as palavras em sequência.
+O motor falhava catastroficamente ao processar dígrafos como "LH" e "NH", travando a articulação.
 
-Quero melhorar:
+* **A Solução:** Substituição por fronteiras prosódicas e transições líquidas. Palavras como *olhos* são convertidas para `ó-llios`.
+* **Ciência por trás:** O hífen atua como um separador prosódico (*prosodic boundary*), forçando a rede neural a sustentar o ataque da vogal "Ó". A dupla consoante `ll` sinaliza uma transição contínua ao motor, impedindo que ele feche o trato vocal e eliminando o som anasalado ou robótico.
 
-* pausas;
-* duração das pausas;
-* velocidade por trecho;
-* ritmo de frases;
-* ênfase;
-* pontuação;
-* diálogos.
+### 4.2. Controle de Oclusão Labial e Ressonância
 
-### Nomes em inglês
+* **O Problema do "M" Final:** Palavras como *mim* e *com* soavam abafadas porque o "M" no final da palavra obriga o modelo acústico a simular uma oclusão bilabial (fechar os lábios totalmente).
+* **A Solução Alveolar (`mín`, `cõn`):** Ao trocar pelo "N", a articulação passa para o alvéolo (a língua toca o céu da boca). Isso interrompe o fluxo de ar de forma abrupta e limpa, devolvendo a naturalidade da fala brasileira.
 
-Também percebi dificuldades quando um texto em português contém nomes ou palavras em inglês.
+### 4.3. Manipulação de Timbre via Diacríticos
 
-Por exemplo, um personagem com nome inglês pode ser pronunciado de uma maneira estranha pelo modelo português.
+Para evitar o "Nasal Bleeding" (quando a IA espalha o som nasal para vogais adjacentes, lendo "boa" como "bõa"), criamos uma matriz matemática de acentuação:
 
-Quero encontrar uma forma de lidar com isso sem necessariamente precisar trocar toda a voz.
+* **Acento Agudo (`´`):** Força a abertura máxima da cavidade oral (`bóa`, `cóisa`). Garante um timbre claro e projetado.
+* **Circunflexo (`^`):** Força o fechamento aveludado da vogal tônica em dígrafos (`es-pê-llio`, `es-cô-llia`), prevenindo estalos metálicos na transição.
+* **Til (`~`):** Usado estritamente para demarcar passagem obrigatória de ar pela cavidade nasal (`quãn-do`, `Hũm`).
 
-## 5. Filosofia do projeto
+### 4.4. Modelagem de Prosódia Emocional
 
-Quero que o DieHoward seja principalmente:
+Textos literários exigem suspiros, risadas e interjeições (fricativas glotais) que motores TTS não sabem ler naturalmente.
 
-* local;
-* barato;
-* open source quando possível;
-* modular;
-* extensível;
-* capaz de trabalhar com textos longos;
-* relativamente leve;
-* independente de APIs proprietárias;
-* capaz de evoluir para algo mais inteligente.
+* **Sustentação de Vogal (`Ôuh`, `Áah`):** Modifica o *duration model* da IA. O "H" final força o áudio a esticar a sílaba, simulando um lamento melancólico.
+* **Risadas e Sopros Acústicos (`Ra-rá-ra`, `Rí-ri-ri`):** O "R" inicial aciona a fricativa glotal do modelo (som de ar raspando), enquanto a hifenização impede que a voz emende tudo de forma mecânica.
 
-Não quero simplesmente criar um script que executa:
+---
 
-`texto -> Piper -> MP3`
+## 5. Arquitetura e Direção Futura
 
-Quero eventualmente construir uma arquitetura em que diferentes componentes tenham responsabilidades diferentes.
+O objetivo a longo prazo é transicionar de um script de execução linear (`Texto -> Piper -> MP3`) para uma arquitetura modular inteligente em múltiplas camadas de processamento.
 
-Por exemplo:
+### Evolução do Pipeline
+
+**De (Atual):**
 
 ```text
-Livro
-  ↓
-Parser
-  ↓
-Analisador de texto
-  ↓
-Normalização
-  ↓
-Detecção de idioma
-  ↓
-Tratamento de nomes/termos
-  ↓
-Segmentação
-  ↓
-Controle de ritmo
-  ↓
-TTS
-  ↓
-Pós-processamento de áudio
-  ↓
-Arquivo final
+Livro → Parser → Normalização → TTS → Áudio Final
+
 ```
 
-Isso é apenas uma ideia inicial, não uma arquitetura definitiva.
-
-
-## 6. Hardware e ambiente
-
-Meu ambiente principal é Linux Mint.
-
-Tenho interesse em executar o máximo possível localmente.
-
-Meu computador utiliza um:
-
-* AMD Ryzen 5 3400G
-* Radeon Vega Graphics
-
-Também já tive/tenho uma NVIDIA GTX 960 disponível em meu ambiente, portanto considere que **GPU pode ou não estar disponível dependendo da configuração atual**.
-
-Não presuma que tenho uma GPU moderna com grande quantidade de VRAM.
-
-Sempre considere o custo computacional das soluções.
-
-## 7. Direção futura
-
-No futuro, gostaria que o DieHoward pudesse evoluir de um simples TTS para um sistema de processamento de livros.
-
-Por exemplo:
+**Para (Futuro):**
 
 ```text
               ┌──────────────┐
@@ -180,7 +121,7 @@ Por exemplo:
              └───────┬───────┘
                      ↓
         ┌─────────────────────────┐
-        │ Análise / Normalização  │
+        │ Análise / Normalização  │ (lexicon.json, ipa_rules.json)
         └────────────┬────────────┘
                      ↓
           ┌─────────────────────┐
@@ -188,7 +129,7 @@ Por exemplo:
           └──────────┬──────────┘
                      ↓
         ┌────────────────────────┐
-        │ Preparação para TTS    │
+        │ Preparação para TTS    │ (Controle de Ritmo Dinâmico)
         └────────────┬───────────┘
                      ↓
               ┌───────────┐
@@ -202,22 +143,14 @@ Por exemplo:
              ┌───────────┐
              │   Áudio   │
              └───────────┘
+
 ```
 
-Isso pode posteriormente incluir recursos como:
+### Funcionalidades Planejadas no Roadmap:
 
-* múltiplas vozes;
-* vozes diferentes para personagens;
-* detecção de diálogos;
-* controle automático de velocidade;
-* pronúncia personalizada;
-* dicionário de nomes;
-* suporte multilíngue;
-* geração de capítulos;
-* metadados;
-* conversão para formatos como WAV/MP3/Opus;
-* normalização de volume;
-* processamento de silêncio;
-* retomada de processamento caso o programa seja interrompido.
-
-Mas não quero implementar tudo isso de uma vez.
+* Detecção automática de idioma e dicionário de pronúncias estrangeiras.
+* Múltiplas vozes e detecção dinâmica de diálogos (vozes diferentes para personagens).
+* Controle automático de velocidade com inserção matemática de pausas baseada na pontuação.
+* Geração de metadados e capítulos embutidos.
+* Processamento inteligente de silêncio (remoção de estalos).
+* Retomada segura de processamento (resume) caso o programa seja interrompido durante textos longos.

@@ -1,4 +1,5 @@
 # Projeto dieHoward
+![Logo Text](icons/logo.png)
 
 ## 1. Sobre
 

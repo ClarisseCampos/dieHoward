@@ -20,26 +20,30 @@ def main():
     path_out = Path("data/output") / f"{Path(arquivo_nome).stem}_{engine_tipo}.wav"
 
     if engine_tipo == "kokoro":
-        with open(path_in, "r", encoding="utf-8", errors="ignore") as f:
-            texto = f.read()
+            with open(path_in, "r", encoding="utf-8", errors="ignore") as f:
+                texto = f.read()
 
-        engine = KokoroCPUEngine(
-            model_path="engines/kokoro/models/kokoro-v1.0.onnx",
-            voices_path="engines/kokoro/models/voices-v1.0.bin"
-        )
-
-        with DieHowardTUI.criar_barra_progresso() as progress:
-            task = progress.add_task(f"[cyan]Sintetizando Kokoro ({voz})...", total=100)
-
-            def atualizar_barra(porcentagem, atual, total):
-                progress.update(task, completed=porcentagem, description=f"[cyan]Kokoro: bloco {atual}/{total} ({porcentagem}%)...")
-
-            engine.gerar_audio_com_progresso(
-                texto=texto, 
-                output_path=str(path_out), 
-                voice=voz, 
-                progress_callback=atualizar_barra
+            engine = KokoroCPUEngine(
+                model_path="engines/kokoro/models/kokoro-v1.0.onnx",
+                voices_path="engines/kokoro/models/voices-v1.0.bin"
             )
+
+            # Defina a velocidade desejada aqui (ex: 0.75 para uma fala mais calma)
+            velocidade = 0.83
+
+            with DieHowardTUI.criar_barra_progresso() as progress:
+                task = progress.add_task(f"[cyan]Sintetizando Kokoro ({voz})...", total=100)
+
+                def atualizar_barra(porcentagem, atual, total):
+                    progress.update(task, completed=porcentagem, description=f"[cyan]Kokoro: bloco {atual}/{total} ({porcentagem}%)...")
+
+                engine.gerar_audio_com_progresso(
+                    texto=texto, 
+                    output_path=str(path_out), 
+                    voice=voz, 
+                    speed=velocidade,  # <-- Passando o parâmetro de velocidade
+                    progress_callback=atualizar_barra
+                )
 
     elif engine_tipo == "piper":
         with open(path_in, "r", encoding="utf-8", errors="ignore") as f:

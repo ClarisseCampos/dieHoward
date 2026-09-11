@@ -53,8 +53,8 @@ class DieHowardTUI:
     @staticmethod
     def selecionar_engine() -> tuple[str, str]:
         console.print("\n[bold yellow]🤖 Selecione o Motor de Síntese:[/bold yellow]")
-        console.print("1. [bold cyan]Kokoro-82M[/bold cyan] (CPU ONNX - Texto Bruto)")
-        console.print("2. [bold magenta]Piper TTS[/bold magenta] (Faber Medium - Com Normalizador)")
+        console.print("1. [bold cyan]Kokoro-82M[/bold cyan] (Recomendado)")
+        console.print("2. [bold magenta]Piper TTS[/bold magenta] (Modelo mais leve)")
         
         opcao = Prompt.ask("Escolha o motor", choices=["1", "2"])
 

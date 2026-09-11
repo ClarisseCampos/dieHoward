@@ -1,4 +1,4 @@
-# Projeto dieHoward
+# dieHoward — Pipeline TTS Local para Audiobooks
 ![Logo Text](icons/logo.png)
 
 ## 1. Sobre
@@ -11,20 +11,20 @@ A ideia do projeto é transformar livros e textos extensos em uma experiência d
 
 O nome nasceu como uma homenagem a um monólogo do filme *Pearl* (2022), no qual a atriz Mia Goth interpreta magistralmente uma conversa dissecante com seu marido, Howard, por mais de oito minutos.
 
-> *"Howard... Eu te odeio tanto por me deixar aqui, às vezes espero que você morra. Sinto muito. Sinto-me péssimo admitindo isso, mas é a verdade."* — [Trecho do Monólogo](https://youtu.be/kj8UiWw2lxg)
+> *"Howard... Eu te odeio tanto por ter me deixado aqui. Às vezes eu espero que você morra. Me desculpa. É horrível admitir isso, mas é a verdade"* — [Trecho do Monólogo](https://youtu.be/kj8UiWw2lxg)
 
 Este texto serviu de *benchmark* (base de testes) para rastrear a evolução do projeto. Ele expôs os desafios mais difíceis da síntese de voz: o ritmo, a entonação emotiva e a pronúncia de palavras estrangeiras como "Howard". Tal qual a Pearl espera que Howard morra, eu espero que o problema da pronúncia robótica também morra — por isso, **dieHoward**.
 
 ---
+## Destaques
 
-## 2. Hardware, Ambiente e Filosofia
+- **100% Local e Privado**: Nenhuma dependência de APIs externas ou conexão com a nuvem.
+- **Otimizado para CPU**: Execução performática via `onnxruntime`.
+- **TUI Interativa (Rich)**: Menu visual para seleção de arquivos, motores, vozes e progresso em tempo real com porcentagem.
+- **Arquitetura Dual-Engine**:
+  - **Kokoro-82M**: Processamento de texto bruto (raw text) com alta expressividade.
+  - **Piper TTS**: Processamento com normalização de texto, suporte a regras IPA e dicionário léxico.
 
-O DieHoward é guiado por uma filosofia estrita de desenvolvimento:
-
-* **Local, barato e open source** (sempre que possível).
-* **Modular e extensível.**
-* **Relativamente leve**, priorizando custo computacional acessível.
-* **Independente de APIs proprietárias.**
 
 ### Ambiente de Desenvolvimento
 
@@ -36,23 +36,28 @@ O DieHoward é guiado por uma filosofia estrita de desenvolvimento:
 
 ---
 
-## 3. Estado Atual: O Motor TTS
-
-Atualmente, o projeto utiliza o **Piper TTS**, rodando o modelo acústico `pt_BR-faber-medium.onnx`. A integração é feita via Python utilizando `subprocess`.
-
-```python
-import subprocess
-
-subprocess.run([
-    "piper",
-    "--model", "pt_BR-faber-medium.onnx",
-    "--output_file", "output.wav",
-    "--length_scale", "1.60"
-])
-
+```text
+die-howard/
+├── app.py                     # Ponto de entrada único com TUI unificada
+├── common/                    # Módulos compartilhados
+│   ├── config/                # Dicionários de substituição e regras IPA
+│   │   ├── ipa_rules.json
+│   │   └── lexicon.json
+│   ├── normalizer.py          # Normalizador de texto (utilizado pelo Piper)
+│   └── tui.py                 # Interface gráfica de terminal (Rich)
+├── engines/                   # Motores de síntese isolados
+│   ├── kokoro/
+│   │   ├── kokoro_engine.py   # Wrapper ONNX do Kokoro
+│   │   └── models/            # kokoro-v1.0.onnx e voices-v1.0.bin
+│   └── piper/
+│       └── models/            # pt_BR-faber-medium.onnx e .json
+├── data/                      # Estrutura centralizada de I/O
+│   ├── input/                 # Coloque seus arquivos .txt aqui
+│   ├── output/                # Áudios .wav gerados pelo pipeline
+│   └── temp/                  # Arquivos intermediários e cache
+├── requirements.txt           # Dependências congeladas do ambiente
+└── .gitignore                 # Filtros para git
 ```
-
-O `length_scale` foi ajustado porque a leitura padrão do modelo era excessivamente rápida. Embora o Piper entregue uma voz muito mais natural que sistemas TTS antigos, encontramos barreiras estruturais significativas, listadas a seguir.
 
 ### Problemas Mapeados:
 
@@ -155,3 +160,4 @@ Livro → Parser → Normalização → TTS → Áudio Final
 * Geração de metadados e capítulos embutidos.
 * Processamento inteligente de silêncio (remoção de estalos).
 * Retomada segura de processamento (resume) caso o programa seja interrompido durante textos longos.
+* Identificar o hardware do usuário para configurações ideais

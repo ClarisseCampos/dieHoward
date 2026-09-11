@@ -35,6 +35,7 @@ Este texto serviu de *benchmark* (base de testes) para rastrear a evolução do 
 **Premissa de Engenharia:** Não se deve presumir a existência de uma GPU moderna com grande quantidade de VRAM. Toda solução implementada deve levar em conta o custo computacional e rodar satisfatoriamente em configurações modestas.
 
 ---
+### Árvore do projeto
 
 ```text
 die-howard/

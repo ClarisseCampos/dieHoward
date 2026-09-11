@@ -1,5 +1,11 @@
 # dieHoward — Pipeline TTS Local para Audiobooks
-![Logo Text](icons/logo.png)
+
+<div align="center">
+
+  ![Logo Text](icons/logo.png)
+
+</div>
+
 
 ## 1. Sobre
 

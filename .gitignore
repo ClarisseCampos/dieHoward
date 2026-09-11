@@ -1,32 +1,44 @@
 # Ambiente virtual
 .venv/
+venv/
+env/
 
 # Cache do Python
 __pycache__/
 *.py[cod]
+*$py.class
 *.pyo
 
-# Arquivos temporários
-*.tmp
-*.log
-
-# IDEs
+# IDEs e Editores
 .vscode/
 .idea/
 
-# Sistema
+# Arquivos do Sistema
 .DS_Store
 Thumbs.db
 
-# Áudios gerados
-audios/
+# Logs e Temporários
+*.log
+*.tmp
+data/temp/*
+!data/temp/.gitkeep
 
-# Livros de teste
-textos/
+# Áudios Gerados (Entrada e Saída de Dados)
+data/output/*
+!data/output/.gitkeep
 
-# Modelos do Piper
-models/
+# Textos de teste pessoais (opcional: ignora textos pesados de teste, mantendo a estrutura)
+data/input/*
+!data/input/.gitkeep
 
-# Arquivos grandes
+# Modelos do Kokoro e do Piper (Arquivos pesados e binários)
+engines/piper/models/*.onnx
+engines/piper/models/*.json
+engines/kokoro/models/*.onnx
+engines/kokoro/models/*.bin
+
+# Ignora apenas arquivos de mídia pesados
 *.wav
 *.mp3
+*.flac
+*.txt

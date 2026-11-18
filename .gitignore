@@ -46,3 +46,9 @@ models/
 *.onnx
 *.bin
 data/output/*.wav
+
+__pycache__/
+*.pyc
+data/input/*
+data/output/*
+data/temp/*

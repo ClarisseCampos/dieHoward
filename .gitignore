@@ -42,3 +42,9 @@ engines/kokoro/models/*.bin
 *.mp3
 *.flac
 *.txt
+models/
+*.onnx
+*.bin
+data/input/*
+data/output/*
+data/temp/*

@@ -21,7 +21,7 @@ class DieHowardTUI:
         console.clear()
         console.print(
             Panel.fit(
-                "[bold cyan]🎙️ DIEHOWARD AUDIOBOOK PIPELINE[/bold cyan]\n"
+                "[bold cyan]🦆 DIEHOWARD AUDIOBOOK PIPELINE[/bold cyan]\n"
                 "[dim]Local-First Audio Synthesis | CPU-Optimized[/dim]",
                 border_style="magenta"
             )

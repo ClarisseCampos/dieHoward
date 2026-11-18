@@ -28,14 +28,19 @@ class TextNormalizer:
         return texto
 
     def processar(self, texto: str) -> str:
-        """Aplica as regras lexicais e fonéticas unificadas no texto."""
-        texto_processado = texto
+        """Sanitiza caracteres inválidos e aplica as regras lexicais e fonéticas no texto."""
+        # 1. Remove caracteres de controle invisíveis e bytes nulos (\x00, \x11, etc) de PDFs e EPUBs
+        texto_limpo = ''.join(char for char in texto if char.isprintable() or char in '\n\t')
+        
+        # 2. Normaliza múltiplos espaços/quebras de linha excessivas para evitar blocos vazios no TTS
+        texto_processado = re.sub(r'[ \t]+', ' ', texto_limpo)
+        texto_processado = re.sub(r'\n{3,}', '\n\n', texto_processado).strip()
 
-        # 1. Aplica as substituições do léxico
+        # 3. Aplica as substituições do léxico
         if self.lexicon:
             texto_processado = self._aplicar_substituicoes(texto_processado, self.lexicon)
 
-        # 2. Aplica as regras de diacríticos e transliteração
+        # 4. Aplica as regras de diacríticos e transliteração
         if self.rules:
             texto_processado = self._aplicar_substituicoes(texto_processado, self.rules)
 

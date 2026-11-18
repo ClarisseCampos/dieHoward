@@ -1,6 +1,7 @@
 from pathlib import Path
 from common.tui import DieHowardTUI, console
 from common.normalizer import TextNormalizer
+from common.parser import DocumentParser
 from engines.kokoro.kokoro_engine import KokoroCPUEngine
 from engines.piper.piper_engine import PiperEngine
 
@@ -19,14 +20,19 @@ def main():
     path_in = Path("data/input") / arquivo_nome
     path_out = Path("data/output") / f"{Path(arquivo_nome).stem}_{engine_tipo}.wav"
 
-    # 2. Leitura e Normalização Única
-    with open(path_in, "r", encoding="utf-8", errors="ignore") as f:
-        texto_bruto = f.read()
+    # 2. Extração de Texto via DocumentParser (TXT, PDF, EPUB)
+    try:
+        console.print(f"[dim]Extraindo texto de {arquivo_nome}...[/dim]")
+        texto_bruto = DocumentParser.extrair_texto(path_in)
+    except Exception as e:
+        console.print(f"\n[bold red]✖ Erro ao tentar ler o arquivo {path_in.name}:[/bold red] {e}\n")
+        return
 
+    # 3. Normalização
     normalizer = TextNormalizer()
     texto_tratado = normalizer.processar(texto_bruto)
 
-    # 3. Execução dos Motores TTS
+    # 4. Execução dos Motores TTS
     try:
         if engine_tipo == "kokoro":
             engine = KokoroCPUEngine(
@@ -85,12 +91,12 @@ def main():
                     progress_callback=atualizar_barra,
                 )
 
-        # 4. Finalização com Sucesso
+        # 5. Finalização com Sucesso
         console.print(f"\n[bold green]✔ Processamento concluído a 100%![/bold green]")
         console.print(f"🔊 Áudio final disponível em: [bold yellow]{path_out}[/bold yellow]\n")
 
     except Exception as e:
-        console.print(f"\n[bold red]✖ Erro durante o processamento:[/bold red] {e}\n")
+        console.print(f"\n[bold red]✖ Erro durante o processamento TTS:[/bold red] {e}\n")
 
 
 if __name__ == "__main__":

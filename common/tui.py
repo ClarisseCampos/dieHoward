@@ -30,24 +30,37 @@ class DieHowardTUI:
     @staticmethod
     def listar_arquivos_input() -> str:
         input_dir = Path("data/input")
-        arquivos = list(input_dir.glob("*.txt"))
+        
+        # Suporta extensões .txt, .pdf e .epub
+        extensoes_permitidas = ("*.txt", "*.pdf", "*.epub")
+        arquivos = []
+        for ext in extensoes_permitidas:
+            arquivos.extend(input_dir.glob(ext))
+
+        # Ordena por nome para o menu ficar organizado
+        arquivos.sort(key=lambda x: x.name.lower())
 
         if not arquivos:
-            console.print("[bold red]❌ Nenhum arquivo .txt encontrado em data/input/[/bold red]")
+            console.print("[bold red]❌ Nenhum arquivo (.txt, .pdf, .epub) encontrado em data/input/[/bold red]")
             return None
 
-        table = Table(title="📄 Arquivos de Texto Disponíveis", border_style="dim")
+        table = Table(title="📄 Livros e Documentos Disponíveis", border_style="dim")
         table.add_column("Nº", justify="center", style="cyan", no_wrap=True)
         table.add_column("Nome do Arquivo", style="green")
+        table.add_column("Formato", justify="center", style="yellow")
         table.add_column("Tamanho", justify="right")
 
         for idx, arq in enumerate(arquivos, 1):
             tamanho = f"{arq.stat().st_size / 1024:.1f} KB"
-            table.add_row(str(idx), arq.name, tamanho)
+            formato = arq.suffix.upper().replace(".", "")
+            table.add_row(str(idx), arq.name, formato, tamanho)
 
         console.print(table)
         
-        escolha = Prompt.ask("Selecione o número do arquivo", choices=[str(i) for i in range(1, len(arquivos) + 1)])
+        escolha = Prompt.ask(
+            "Selecione o número do arquivo", 
+            choices=[str(i) for i in range(1, len(arquivos) + 1)]
+        )
         return arquivos[int(escolha) - 1].name
 
     @staticmethod

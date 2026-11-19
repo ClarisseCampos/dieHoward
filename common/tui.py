@@ -1,82 +1,126 @@
-import os
 from pathlib import Path
 from rich.console import Console
-from rich.panel import Panel
-from rich.prompt import Prompt
 from rich.table import Table
+from rich.panel import Panel
 from rich.progress import (
     Progress,
+    SpinnerColumn,
     TextColumn,
     BarColumn,
     TaskProgressColumn,
-    TimeRemainingColumn,
-    SpinnerColumn
+    TimeElapsedColumn,
 )
 
 console = Console()
 
+
 class DieHowardTUI:
     @staticmethod
     def exibir_cabecalho():
-        console.clear()
         console.print(
             Panel.fit(
-                "[bold cyan]🎙️ DIEHOWARD AUDIOBOOK PIPELINE[/bold cyan]\n"
-                "[dim]Local-First Audio Synthesis | CPU-Optimized[/dim]",
-                border_style="magenta"
+                "🎙️ DIEHOWARD AUDIOBOOK PIPELINE\nLocal-First Audio Synthesis | CPU-Optimized",
+                border_style="cyan",
             )
         )
 
     @staticmethod
-    def listar_arquivos_input() -> str:
-        input_dir = Path("data/input")
-        arquivos = list(input_dir.glob("*.txt"))
+    def listar_arquivos_input():
+        pasta_input = Path("data/input")
 
-        if not arquivos:
-            console.print("[bold red]❌ Nenhum arquivo .txt encontrado em data/input/[/bold red]")
+        if not pasta_input.exists():
+            console.print("[red]Pasta data/input não encontrada.[/red]")
             return None
 
-        table = Table(title="📄 Arquivos de Texto Disponíveis", border_style="dim")
-        table.add_column("Nº", justify="center", style="cyan", no_wrap=True)
-        table.add_column("Nome do Arquivo", style="green")
-        table.add_column("Tamanho", justify="right")
+        arquivos = [
+            f
+            for f in pasta_input.iterdir()
+            if f.is_file() and f.suffix.lower() in [".txt", ".pdf", ".epub"]
+        ]
 
-        for idx, arq in enumerate(arquivos, 1):
-            tamanho = f"{arq.stat().st_size / 1024:.1f} KB"
-            table.add_row(str(idx), arq.name, tamanho)
+        if not arquivos:
+            console.print(
+                "[yellow]Nenhum arquivo (.txt, .pdf, .epub) encontrado na pasta data/input.[/yellow]"
+            )
+            return None
 
-        console.print(table)
-        
-        escolha = Prompt.ask("Selecione o número do arquivo", choices=[str(i) for i in range(1, len(arquivos) + 1)])
-        return arquivos[int(escolha) - 1].name
+        console.print("\n 📄 Arquivos Disponíveis ")
+        tabela = Table(show_header=True, header_style="bold magenta")
+        tabela.add_column("Nº", style="dim", width=4)
+        tabela.add_column("Nome do Arquivo")
+        tabela.add_column("Tamanho", justify="right")
+
+        arquivos.sort(key=lambda x: x.name.lower())
+
+        for i, arq in enumerate(arquivos, 1):
+            tamanho_kb = arq.stat().st_size / 1024
+            tabela.add_row(str(i), arq.name, f"{tamanho_kb:.1f} KB")
+
+        console.print(tabela)
+
+        while True:
+            padrao = "1" if arquivos else ""
+            escolha = console.input(f"Selecione o número do arquivo [{padrao}]: ")
+
+            if not escolha and arquivos:
+                return arquivos[0].name
+
+            try:
+                idx = int(escolha) - 1
+                if 0 <= idx < len(arquivos):
+                    return arquivos[idx].name
+                else:
+                    console.print("[red]Número inválido. Tente novamente.[/red]")
+            except ValueError:
+                console.print("[red]Por favor, digite um número válido.[/red]")
 
     @staticmethod
-    def selecionar_engine() -> tuple[str, str]:
-        console.print("\n[bold yellow]🤖 Selecione o Motor de Síntese:[/bold yellow]")
-        console.print("1. [bold cyan]Kokoro-82M[/bold cyan] (Recomendado)")
-        console.print("2. [bold magenta]Piper TTS[/bold magenta] (Modelo mais leve)")
-        
-        opcao = Prompt.ask("Escolha o motor", choices=["1", "2"])
+    def selecionar_engine():
+        console.print("\n⚙️ Motores TTS Disponíveis:")
+        console.print("1. Kokoro (Alta Qualidade - Recomendado)")
+        console.print("2. Piper (Mais Rápido)")
 
-        if opcao == "1":
-            console.print("\n[bold yellow]🗣️ Vozes do Kokoro PT-BR:[/bold yellow]")
+        while True:
+            escolha = console.input("Escolha o motor [1/2]: ")
+            if escolha in ["1", ""]:
+                engine = "kokoro"
+                break
+            elif escolha == "2":
+                engine = "piper"
+                break
+            else:
+                console.print("[red]Opção inválida.[/red]")
+
+        voz = None
+        if engine == "kokoro":
+            console.print("\n🗣️ Vozes Disponíveis (Kokoro - Português BR):")
             console.print("1. pf_dora (Feminino)")
             console.print("2. pm_alex (Masculino)")
             console.print("3. pm_santa (Masculino - Grave)")
-            voz_idx = Prompt.ask("Escolha a voz", choices=["1", "2", "3"])
-            voz_map = {"1": "pf_dora", "2": "pm_alex", "3": "pm_santa"}
-            return "kokoro", voz_map[voz_idx]
-        else:
-            return "piper", "faber"
+
+            while True:
+                escolha_voz = console.input("Escolha a voz [1/2/3]: ")
+                if escolha_voz in ["1", ""]:
+                    voz = "pf_dora"
+                    break
+                elif escolha_voz == "2":
+                    voz = "pm_alex"
+                    break
+                elif escolha_voz == "3":
+                    voz = "pm_santa"
+                    break
+                else:
+                    console.print("[red]Opção inválida.[/red]")
+
+        return engine, voz
 
     @staticmethod
     def criar_barra_progresso():
-        """Cria uma barra de progresso do Rich altamente estilizada e com porcentagem."""
         return Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
-            BarColumn(bar_width=None, complete_style="green", finished_style="bold green"),
+            BarColumn(),
             TaskProgressColumn(),
-            TimeRemainingColumn(),
-            console=console
+            TimeElapsedColumn(),
+            console=console,
         )

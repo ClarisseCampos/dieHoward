@@ -1,6 +1,7 @@
 from pathlib import Path
 from common.tui import DieHowardTUI, console
 from common.normalizer import TextNormalizer
+from common.parser import DocumentParser  # <-- Importação adicionada para suportar PDF/EPUB
 from engines.kokoro.kokoro_engine import KokoroCPUEngine
 from engines.piper.piper_engine import PiperEngine
 
@@ -15,11 +16,20 @@ def main():
     engine_tipo, voz = DieHowardTUI.selecionar_engine()
     
     path_in = Path("data/input") / arquivo_nome
-    path_out = Path("data/output") / f"{Path(arquivo_nome).stem}_{engine_tipo}.wav"
+    path_out = Path("data/output") / f"{path_in.stem}_{engine_tipo}.wav"
 
     # 2. Leitura e Normalização Única
-    with open(path_in, "r", encoding="utf-8", errors="ignore") as f:
-        texto_bruto = f.read()
+    console.print(f"\n[cyan]Extraindo texto de {arquivo_nome}...[/cyan]")
+    
+    # Diferencia txt de formatos binários (PDF/EPUB) usando o seu parser
+    if path_in.suffix.lower() == ".txt":
+        with open(path_in, "r", encoding="utf-8", errors="ignore") as f:
+            texto_bruto = f.read()
+    else:
+        # Chama o seu parser para extrair o texto de PDFs ou EPUBs
+        # (Se o seu método chamar diferente de 'extrair_texto', basta ajustar abaixo)
+        parser = DocumentParser()
+        texto_bruto = parser.extrair_texto(str(path_in))
 
     normalizer = TextNormalizer()
     texto_tratado = normalizer.processar(texto_bruto)
@@ -27,8 +37,8 @@ def main():
     # 3. Execução dos Motores TTS
     if engine_tipo == "kokoro":
         engine = KokoroCPUEngine(
-            model_path="engines/kokoro/models/kokoro-v1.0.onnx",
-            voices_path="engines/kokoro/models/voices-v1.0.bin"
+            model_path="models/kokoro/kokoro-v1.0.onnx", # <-- Caminho corrigido
+            voices_path="models/kokoro/voices-v1.0.bin"  # <-- Caminho corrigido
         )
         
         with DieHowardTUI.criar_barra_progresso() as progress:
@@ -47,7 +57,7 @@ def main():
 
     elif engine_tipo == "piper":
         engine = PiperEngine(
-            model_path="engines/piper/models/pt_BR-faber-medium.onnx",
+            model_path="models/pt_BR-faber-medium.onnx", # <-- Caminho corrigido
             length_scale="1.4"
         )
 

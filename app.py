@@ -1,81 +1,136 @@
+import re
 from pathlib import Path
 from common.tui import DieHowardTUI, console
 from common.normalizer import TextNormalizer
-from common.parser import DocumentParser  # <-- Importação adicionada para suportar PDF/EPUB
+from common.parser import DocumentParser
 from engines.kokoro.kokoro_engine import KokoroCPUEngine
 from engines.piper.piper_engine import PiperEngine
 
+
+def limpar_nome_arquivo(texto: str) -> str:
+    """Remove caracteres inválidos para nomes de arquivos e pastas."""
+    texto_limpo = re.sub(r'[\\/*?:"<>|]', "", texto)
+    texto_limpo = re.sub(r"\s+", "_", texto_limpo.strip())
+    return texto_limpo[:60] or "capitulo"
+
+
+def sintetizar_trecho(engine_tipo: str, engine, voz: str, texto: str, destino: Path, rotulo: str):
+    """Executa a síntese de um bloco de texto (livro inteiro ou um capítulo)."""
+    with DieHowardTUI.criar_barra_progresso() as progress:
+        if engine_tipo == "kokoro":
+            task = progress.add_task(f"[cyan]{rotulo}...", total=100)
+
+            def atualizar_barra(porcentagem, atual, total):
+                progress.update(
+                    task,
+                    completed=porcentagem,
+                    description=f"[cyan]{rotulo}: bloco {atual}/{total} ({porcentagem}%)...",
+                )
+
+            engine.gerar_audio_com_progresso(
+                texto=texto,
+                output_path=str(destino),
+                voice=voz,
+                speed=0.83,
+                progress_callback=atualizar_barra,
+            )
+
+        elif engine_tipo == "piper":
+            task = progress.add_task(f"[magenta]{rotulo} (aguarde)...", total=100)
+
+            def atualizar_barra(porcentagem, atual, total):
+                if porcentagem == 100:
+                    progress.update(
+                        task,
+                        completed=100,
+                        description=f"[magenta]{rotulo}: concluído![/magenta]",
+                    )
+                else:
+                    progress.update(
+                        task,
+                        completed=10,
+                        description=f"[magenta]{rotulo}: processando no fundo...[/magenta]",
+                    )
+
+            engine.gerar_audio_com_progresso(
+                texto=texto,
+                output_path=str(destino),
+                progress_callback=atualizar_barra,
+            )
+
+
 def main():
     DieHowardTUI.exibir_cabecalho()
-    
+
     # 1. Seleção Interativa
     arquivo_nome = DieHowardTUI.listar_arquivos_input()
     if not arquivo_nome:
+        console.print("[yellow]Nenhum arquivo selecionado. Encerrando.[/yellow]")
         return
 
     engine_tipo, voz = DieHowardTUI.selecionar_engine()
-    
+    modo_saida = DieHowardTUI.selecionar_modo_saida()
+
     path_in = Path("data/input") / arquivo_nome
-    path_out = Path("data/output") / f"{path_in.stem}_{engine_tipo}.wav"
-
-    # 2. Leitura e Normalização Única
-    console.print(f"\n[cyan]Extraindo texto de {arquivo_nome}...[/cyan]")
-    
-    # Diferencia txt de formatos binários (PDF/EPUB) usando o seu parser
-    if path_in.suffix.lower() == ".txt":
-        with open(path_in, "r", encoding="utf-8", errors="ignore") as f:
-            texto_bruto = f.read()
-    else:
-        # Chama o seu parser para extrair o texto de PDFs ou EPUBs
-        # (Se o seu método chamar diferente de 'extrair_texto', basta ajustar abaixo)
-        parser = DocumentParser()
-        texto_bruto = parser.extrair_texto(str(path_in))
-
     normalizer = TextNormalizer()
-    texto_tratado = normalizer.processar(texto_bruto)
 
-    # 3. Execução dos Motores TTS
+    # Inicializa o motor escolhido uma única vez
     if engine_tipo == "kokoro":
         engine = KokoroCPUEngine(
-            model_path="models/kokoro/kokoro-v1.0.onnx", # <-- Caminho corrigido
-            voices_path="models/kokoro/voices-v1.0.bin"  # <-- Caminho corrigido
+            model_path="models/kokoro/kokoro-v1.0.onnx",
+            voices_path="models/kokoro/voices-v1.0.bin",
         )
-        
-        with DieHowardTUI.criar_barra_progresso() as progress:
-            task = progress.add_task(f"[cyan]Sintetizando com Kokoro ({voz})...", total=100)
-
-            def atualizar_barra(porcentagem, atual, total):
-                progress.update(task, completed=porcentagem, description=f"[cyan]Kokoro: bloco {atual}/{total} ({porcentagem}%)...")
-
-            engine.gerar_audio_com_progresso(
-                texto=texto_tratado, 
-                output_path=str(path_out), 
-                voice=voz, 
-                speed=0.83,
-                progress_callback=atualizar_barra
-            )
-
-    elif engine_tipo == "piper":
+    else:
         engine = PiperEngine(
-            model_path="models/pt_BR-faber-medium.onnx", # <-- Caminho corrigido
-            length_scale="1.4"
+            model_path="models/piper/pt_BR-faber-medium.onnx",
+            length_scale="1.4",
         )
 
-        with DieHowardTUI.criar_barra_progresso() as progress:
-            task = progress.add_task("[magenta]Sintetizando com Piper (Faber)...", total=100)
+    try:
+        if modo_saida == "unico":
+            console.print(f"\n[dim]Extraindo texto completo de {arquivo_nome}...[/dim]")
+            texto_bruto = DocumentParser.extrair_texto(path_in)
+            texto_tratado = normalizer.processar(texto_bruto)
 
-            def atualizar_barra(porcentagem, atual, total):
-                progress.update(task, completed=porcentagem, description=f"[magenta]Piper: frase {atual}/{total} ({porcentagem}%)...")
+            path_out = Path("data/output") / f"{path_in.stem}_{engine_tipo}.wav"
+            sintetizar_trecho(engine_tipo, engine, voz, texto_tratado, path_out, "Sintetizando livro")
 
-            engine.gerar_audio_com_progresso(
-                texto=texto_tratado,
-                output_path=str(path_out),
-                progress_callback=atualizar_barra
-            )
+            console.print(f"\n[bold green]✔ Processamento concluído a 100%![/bold green]")
+            console.print(f"🔊 Áudio final disponível em: [bold yellow]{path_out}[/bold yellow]\n")
 
-    # 4. Finalização
-    console.print(f"\n[bold green]✔ Processamento concluído a 100%![/bold green]")
-    console.print(f"🔊 Áudio final disponível em: [bold yellow]{path_out}[/bold yellow]\n")
+        else:
+            console.print(f"\n[dim]Analisando capítulos de {arquivo_nome}...[/dim]")
+            capitulos = DocumentParser.extrair_capitulos(path_in)
+            console.print(f"[bold cyan]📚 {len(capitulos)} capítulo(s) identificado(s).[/bold cyan]\n")
+
+            pasta_saida = Path("data/output") / f"{limpar_nome_arquivo(path_in.stem)}_{engine_tipo}"
+            pasta_saida.mkdir(parents=True, exist_ok=True)
+
+            for idx, cap in enumerate(capitulos, 1):
+                titulo = cap["titulo"]
+                texto_tratado = normalizer.processar(cap["texto"])
+
+                if not texto_tratado.strip():
+                    continue
+
+                nome_wav = f"{idx:02d}_{limpar_nome_arquivo(titulo)}.wav"
+                destino_cap = pasta_saida / nome_wav
+
+                sintetizar_trecho(
+                    engine_tipo,
+                    engine,
+                    voz,
+                    texto_tratado,
+                    destino_cap,
+                    f"Cap. {idx}/{len(capitulos)} ({titulo[:25]})",
+                )
+
+            console.print(f"\n[bold green]✔ Todos os capítulos foram processados![/bold green]")
+            console.print(f"📁 Pasta com os áudios: [bold yellow]{pasta_saida}/[/bold yellow]\n")
+
+    except Exception as e:
+        console.print(f"\n[bold red]✖ Erro durante o processamento:[/bold red] {e}\n")
+
 
 if __name__ == "__main__":
     main()

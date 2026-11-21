@@ -100,9 +100,13 @@ def executar_pipeline(settings: SettingsManager):
         return
 
     engine_tipo, voz = DieHowardTUI.selecionar_engine()
-    modo_saida = DieHowardTUI.selecionar_modo_saida()
 
     path_in = input_dir / arquivo_nome
+    if path_in.suffix.lower() == ".txt":
+        modo_saida = "unico"
+    else:
+        modo_saida = DieHowardTUI.selecionar_modo_saida()
+
     output_dir.mkdir(parents=True, exist_ok=True)
     normalizer = TextNormalizer()
 

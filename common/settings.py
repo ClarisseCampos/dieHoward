@@ -1,0 +1,70 @@
+import json
+from pathlib import Path
+
+
+class SettingsManager:
+    DEFAULT_CONFIG = {
+        "input_dir": "data/input",
+        "output_dir": "data/output",
+    }
+
+    def __init__(self, config_path: str | Path = "common/config/settings.json"):
+        self.config_path = Path(config_path)
+        self.config = self._carregar()
+
+    def _carregar(self) -> dict:
+        if not self.config_path.exists():
+            self.config_path.parent.mkdir(parents=True, exist_ok=True)
+            self._salvar_dados(self.DEFAULT_CONFIG)
+            return self.DEFAULT_CONFIG.copy()
+
+        try:
+            with open(self.config_path, "r", encoding="utf-8") as f:
+                dados = json.load(f)
+            # Garante que todas as chaves padrão existam
+            config_mesclada = self.DEFAULT_CONFIG.copy()
+            config_mesclada.update(dados)
+            return config_mesclada
+        except (json.JSONDecodeError, OSError):
+            return self.DEFAULT_CONFIG.copy()
+
+    def _salvar_dados(self, dados: dict) -> None:
+        self.config_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(self.config_path, "w", encoding="utf-8") as f:
+            json.dump(dados, f, indent=4, ensure_ascii=False)
+
+    @staticmethod
+    def _normalizar_caminho(caminho_str: str) -> Path:
+        # Remove espaços e aspas extras caso o usuário arraste a pasta para o terminal
+        limpo = caminho_str.strip().strip("'\"")
+        return Path(limpo).expanduser()
+
+    def get_input_path(self) -> Path:
+        return self._normalizar_caminho(self.config["input_dir"])
+
+    def get_output_path(self) -> Path:
+        return self._normalizar_caminho(self.config["output_dir"])
+
+    def set_input_dir(self, novo_caminho: str) -> tuple[bool, str]:
+        caminho = self._normalizar_caminho(novo_caminho)
+        if not caminho.exists() or not caminho.is_dir():
+            return False, f"A pasta '{caminho}' não existe ou não é um diretório válido."
+
+        self.config["input_dir"] = str(caminho)
+        self._salvar_dados(self.config)
+        return True, f"Pasta de entrada definida para: {caminho}"
+
+    def set_output_dir(self, novo_caminho: str) -> tuple[bool, str]:
+        caminho = self._normalizar_caminho(novo_caminho)
+        try:
+            caminho.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            return False, f"Não foi possível criar/acessar a pasta '{caminho}': {e}"
+
+        self.config["output_dir"] = str(caminho)
+        self._salvar_dados(self.config)
+        return True, f"Pasta de saída definida para: {caminho}"
+
+    def restaurar_padrao(self) -> None:
+        self.config = self.DEFAULT_CONFIG.copy()
+        self._salvar_dados(self.config)

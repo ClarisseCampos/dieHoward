@@ -1,8 +1,10 @@
 import re
 from pathlib import Path
+from rich.prompt import Prompt
 from common.tui import DieHowardTUI, console
 from common.normalizer import TextNormalizer
 from common.parser import DocumentParser
+from common.settings import SettingsManager
 from engines.kokoro.kokoro_engine import KokoroCPUEngine
 from engines.piper.piper_engine import PiperEngine
 
@@ -59,19 +61,21 @@ def sintetizar_trecho(engine_tipo: str, engine, voz: str, texto: str, destino: P
             )
 
 
-def main():
-    DieHowardTUI.exibir_cabecalho()
+def executar_pipeline(settings: SettingsManager):
+    input_dir = settings.get_input_path()
+    output_dir = settings.get_output_path()
 
-    # 1. Seleção Interativa
-    arquivo_nome = DieHowardTUI.listar_arquivos_input()
+    # 1. Seleção Interativa usando a pasta configurada
+    arquivo_nome = DieHowardTUI.listar_arquivos_input(input_dir)
     if not arquivo_nome:
-        console.print("[yellow]Nenhum arquivo selecionado. Encerrando.[/yellow]")
+        Prompt.ask("\nPressione Enter para voltar ao menu", default="")
         return
 
     engine_tipo, voz = DieHowardTUI.selecionar_engine()
     modo_saida = DieHowardTUI.selecionar_modo_saida()
 
-    path_in = Path("data/input") / arquivo_nome
+    path_in = input_dir / arquivo_nome
+    output_dir.mkdir(parents=True, exist_ok=True)
     normalizer = TextNormalizer()
 
     # Inicializa o motor escolhido uma única vez
@@ -92,10 +96,10 @@ def main():
             texto_bruto = DocumentParser.extrair_texto(path_in)
             texto_tratado = normalizer.processar(texto_bruto)
 
-            path_out = Path("data/output") / f"{path_in.stem}_{engine_tipo}.wav"
+            path_out = output_dir / f"{path_in.stem}_{engine_tipo}.wav"
             sintetizar_trecho(engine_tipo, engine, voz, texto_tratado, path_out, "Sintetizando livro")
 
-            console.print(f"\n[bold green]✔ Processamento concluído a 100%![/bold green]")
+            console.print("\n[bold green]✔ Processamento concluído a 100%![/bold green]")
             console.print(f"🔊 Áudio final disponível em: [bold yellow]{path_out}[/bold yellow]\n")
 
         else:
@@ -103,7 +107,7 @@ def main():
             capitulos = DocumentParser.extrair_capitulos(path_in)
             console.print(f"[bold cyan]📚 {len(capitulos)} capítulo(s) identificado(s).[/bold cyan]\n")
 
-            pasta_saida = Path("data/output") / f"{limpar_nome_arquivo(path_in.stem)}_{engine_tipo}"
+            pasta_saida = output_dir / f"{limpar_nome_arquivo(path_in.stem)}_{engine_tipo}"
             pasta_saida.mkdir(parents=True, exist_ok=True)
 
             for idx, cap in enumerate(capitulos, 1):
@@ -125,11 +129,28 @@ def main():
                     f"Cap. {idx}/{len(capitulos)} ({titulo[:25]})",
                 )
 
-            console.print(f"\n[bold green]✔ Todos os capítulos foram processados![/bold green]")
+            console.print("\n[bold green]✔ Todos os capítulos foram processados![/bold green]")
             console.print(f"📁 Pasta com os áudios: [bold yellow]{pasta_saida}/[/bold yellow]\n")
 
     except Exception as e:
         console.print(f"\n[bold red]✖ Erro durante o processamento:[/bold red] {e}\n")
+
+
+def main():
+    settings = SettingsManager()
+
+    while True:
+        DieHowardTUI.exibir_cabecalho()
+        acao = DieHowardTUI.menu_principal()
+
+        if acao == "iniciar":
+            executar_pipeline(settings)
+            break
+        elif acao == "configuracoes":
+            DieHowardTUI.menu_configuracoes(settings)
+        elif acao == "sair":
+            console.print("[dim]Encerrando DieHoward. Até logo![/dim]")
+            break
 
 
 if __name__ == "__main__":

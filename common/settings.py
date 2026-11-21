@@ -6,6 +6,7 @@ class SettingsManager:
     DEFAULT_CONFIG = {
         "input_dir": "data/input",
         "output_dir": "data/output",
+        "auto_open_output": True,
     }
 
     def __init__(self, config_path: str | Path = "common/config/settings.json"):
@@ -21,7 +22,6 @@ class SettingsManager:
         try:
             with open(self.config_path, "r", encoding="utf-8") as f:
                 dados = json.load(f)
-            # Garante que todas as chaves padrão existam
             config_mesclada = self.DEFAULT_CONFIG.copy()
             config_mesclada.update(dados)
             return config_mesclada
@@ -35,7 +35,6 @@ class SettingsManager:
 
     @staticmethod
     def _normalizar_caminho(caminho_str: str) -> Path:
-        # Remove espaços e aspas extras caso o usuário arraste a pasta para o terminal
         limpo = caminho_str.strip().strip("'\"")
         return Path(limpo).expanduser()
 
@@ -44,6 +43,9 @@ class SettingsManager:
 
     def get_output_path(self) -> Path:
         return self._normalizar_caminho(self.config["output_dir"])
+
+    def get_auto_open_output(self) -> bool:
+        return bool(self.config.get("auto_open_output", True))
 
     def set_input_dir(self, novo_caminho: str) -> tuple[bool, str]:
         caminho = self._normalizar_caminho(novo_caminho)
@@ -64,6 +66,12 @@ class SettingsManager:
         self.config["output_dir"] = str(caminho)
         self._salvar_dados(self.config)
         return True, f"Pasta de saída definida para: {caminho}"
+
+    def toggle_auto_open_output(self) -> bool:
+        novo_valor = not self.get_auto_open_output()
+        self.config["auto_open_output"] = novo_valor
+        self._salvar_dados(self.config)
+        return novo_valor
 
     def restaurar_padrao(self) -> None:
         self.config = self.DEFAULT_CONFIG.copy()

@@ -1,4 +1,7 @@
+import os
 import re
+import sys
+import subprocess
 from pathlib import Path
 from rich.prompt import Prompt
 from common.tui import DieHowardTUI, console
@@ -14,6 +17,31 @@ def limpar_nome_arquivo(texto: str) -> str:
     texto_limpo = re.sub(r'[\\/*?:"<>|]', "", texto)
     texto_limpo = re.sub(r"\s+", "_", texto_limpo.strip())
     return texto_limpo[:60] or "capitulo"
+
+
+def abrir_pasta_grafica(caminho: Path) -> None:
+    """Abre a pasta de destino no gerenciador de arquivos do sistema."""
+    destino = caminho.resolve()
+    try:
+        if sys.platform == "win32":
+            os.startfile(str(destino))
+        elif sys.platform == "darwin":
+            subprocess.Popen(
+                ["open", str(destino)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        else:
+            subprocess.Popen(
+                ["xdg-open", str(destino)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+    except Exception as e:
+        console.print(
+            f"[dim yellow]⚠️ Não foi possível abrir a pasta automaticamente: {e}[/dim yellow]"
+        )
 
 
 def sintetizar_trecho(engine_tipo: str, engine, voz: str, texto: str, destino: Path, rotulo: str):
@@ -102,6 +130,9 @@ def executar_pipeline(settings: SettingsManager):
             console.print("\n[bold green]✔ Processamento concluído a 100%![/bold green]")
             console.print(f"🔊 Áudio final disponível em: [bold yellow]{path_out}[/bold yellow]\n")
 
+            if settings.get_auto_open_output():
+                abrir_pasta_grafica(output_dir)
+
         else:
             console.print(f"\n[dim]Analisando capítulos de {arquivo_nome}...[/dim]")
             capitulos = DocumentParser.extrair_capitulos(path_in)
@@ -131,6 +162,9 @@ def executar_pipeline(settings: SettingsManager):
 
             console.print("\n[bold green]✔ Todos os capítulos foram processados![/bold green]")
             console.print(f"📁 Pasta com os áudios: [bold yellow]{pasta_saida}/[/bold yellow]\n")
+
+            if settings.get_auto_open_output():
+                abrir_pasta_grafica(pasta_saida)
 
     except Exception as e:
         console.print(f"\n[bold red]✖ Erro durante o processamento:[/bold red] {e}\n")

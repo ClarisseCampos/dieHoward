@@ -44,20 +44,30 @@ class DieHowardTUI:
         while True:
             DieHowardTUI.exibir_cabecalho()
 
+            auto_open_status = (
+                "[bold green]Ativado[/bold green]"
+                if settings.get_auto_open_output()
+                else "[dim red]Desativado[/dim red]"
+            )
+
             tabela = Table(title="⚙️ Configurações Atuais", border_style="cyan")
             tabela.add_column("Parâmetro", style="bold yellow")
             tabela.add_column("Valor Atual", style="green")
             tabela.add_row("Pasta de Entrada (Livros)", str(settings.get_input_path()))
             tabela.add_row("Pasta de Saída (Áudios)", str(settings.get_output_path()))
+            tabela.add_row("Abrir pasta ao concluir", auto_open_status)
             console.print(tabela)
 
             console.print("\n[bold yellow]O que deseja alterar?[/bold yellow]")
             console.print("1. Alterar pasta padrão de [bold green]entrada[/bold green]")
             console.print("2. Alterar pasta padrão de [bold cyan]saída[/bold cyan]")
-            console.print("3. Restaurar pastas padrão ([dim]data/input[/dim] e [dim]data/output[/dim])")
-            console.print("4. [bold magenta]Voltar ao Menu Principal[/bold magenta]")
+            console.print("3. Alternar abertura automática da pasta ao concluir")
+            console.print("4. Restaurar configurações padrão")
+            console.print("5. [bold magenta]Voltar ao Menu Principal[/bold magenta]")
 
-            opcao = Prompt.ask("Escolha uma opção", choices=["1", "2", "3", "4"], default="4")
+            opcao = Prompt.ask(
+                "Escolha uma opção", choices=["1", "2", "3", "4", "5"], default="5"
+            )
 
             if opcao == "1":
                 novo = Prompt.ask(
@@ -78,11 +88,17 @@ class DieHowardTUI:
                 Prompt.ask("\nPressione Enter para continuar", default="")
 
             elif opcao == "3":
-                settings.restaurar_padrao()
-                console.print("[bold green]✔ Pastas padrão restauradas com sucesso![/bold green]")
+                ativo = settings.toggle_auto_open_output()
+                estado = "ativada" if ativo else "desativada"
+                console.print(f"[bold green]✔ Abertura automática {estado}![/bold green]")
                 Prompt.ask("\nPressione Enter para continuar", default="")
 
             elif opcao == "4":
+                settings.restaurar_padrao()
+                console.print("[bold green]✔ Configurações padrão restauradas![/bold green]")
+                Prompt.ask("\nPressione Enter para continuar", default="")
+
+            elif opcao == "5":
                 break
 
     @staticmethod
@@ -91,7 +107,9 @@ class DieHowardTUI:
             console.print(
                 f"[bold red]❌ A pasta de entrada configurada não existe: {input_dir}[/bold red]"
             )
-            console.print("[yellow]Acesse 'Configurações' no menu inicial para corrigir o caminho.[/yellow]")
+            console.print(
+                "[yellow]Acesse 'Configurações' no menu inicial para corrigir o caminho.[/yellow]"
+            )
             return None
 
         extensoes_permitidas = ("*.txt", "*.pdf", "*.epub")
@@ -152,7 +170,9 @@ class DieHowardTUI:
     def selecionar_modo_saida() -> str:
         console.print("\n[bold yellow]📂 Modo de Exportação do Áudio:[/bold yellow]")
         console.print("1. [bold green]Arquivo único[/bold green] (Livro completo em um só .wav)")
-        console.print("2. [bold cyan]Separado por capítulos[/bold cyan] (Gera uma pasta com um .wav por capítulo)")
+        console.print(
+            "2. [bold cyan]Separado por capítulos[/bold cyan] (Gera uma pasta com um .wav por capítulo)"
+        )
 
         opcao = Prompt.ask("Escolha o modo", choices=["1", "2"])
         return "unico" if opcao == "1" else "capitulos"

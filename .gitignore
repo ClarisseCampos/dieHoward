@@ -48,3 +48,4 @@ models/
 data/input/*
 data/output/*
 data/temp/*
+common/config/settings.json

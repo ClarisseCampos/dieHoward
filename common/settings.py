@@ -8,6 +8,13 @@ class SettingsManager:
         "output_dir": "data/output",
         "auto_open_output": True,
         "default_engine": "kokoro",
+        "kokoro_voice": "pf_dora",
+    }
+
+    KOKORO_VOICES = {
+        "pf_dora": "pf_dora (Feminino)",
+        "pm_alex": "pm_alex (Masculino)",
+        "pm_santa": "pm_santa (Masculino - Grave)",
     }
 
     def __init__(self, config_path: str | Path = "common/config/settings.json"):
@@ -52,6 +59,14 @@ class SettingsManager:
         engine = self.config.get("default_engine", "kokoro")
         return engine if engine in ("kokoro", "piper") else "kokoro"
 
+    def get_kokoro_voice(self) -> str:
+        voz = self.config.get("kokoro_voice", "pf_dora")
+        return voz if voz in self.KOKORO_VOICES else "pf_dora"
+
+    def get_kokoro_voice_label(self) -> str:
+        voz = self.get_kokoro_voice()
+        return self.KOKORO_VOICES.get(voz, "pf_dora (Feminino)")
+
     def set_input_dir(self, novo_caminho: str) -> tuple[bool, str]:
         caminho = self._normalizar_caminho(novo_caminho)
         if not caminho.exists() or not caminho.is_dir():
@@ -80,6 +95,14 @@ class SettingsManager:
         self._salvar_dados(self.config)
         nome_exibicao = "Kokoro-82M" if engine == "kokoro" else "Piper TTS"
         return True, f"Motor padrão definido para: {nome_exibicao}"
+
+    def set_kokoro_voice(self, voz: str) -> tuple[bool, str]:
+        if voz not in self.KOKORO_VOICES:
+            return False, f"Voz inválida: '{voz}'."
+
+        self.config["kokoro_voice"] = voz
+        self._salvar_dados(self.config)
+        return True, f"Voz padrão do Kokoro definida para: {self.KOKORO_VOICES[voz]}"
 
     def toggle_auto_open_output(self) -> bool:
         novo_valor = not self.get_auto_open_output()

@@ -40,7 +40,32 @@ class DieHowardTUI:
         return mapa[opcao]
 
     @staticmethod
-    def menu_configuracoes(settings: SettingsManager) -> None:
+    def _exibir_resumo_configuracoes(settings: SettingsManager) -> None:
+        auto_open_status = (
+            "[bold green]Ativado[/bold green]"
+            if settings.get_auto_open_output()
+            else "[dim red]Desativado[/dim red]"
+        )
+        motor_atual = (
+            "[bold cyan]Kokoro-82M[/bold cyan]"
+            if settings.get_default_engine() == "kokoro"
+            else "[bold magenta]Piper TTS[/bold magenta]"
+        )
+
+        tabela = Table(title="⚙️ Resumo das Configurações", border_style="cyan")
+        tabela.add_column("Categoria", style="dim")
+        tabela.add_column("Parâmetro", style="bold yellow")
+        tabela.add_column("Valor Atual", style="green")
+
+        tabela.add_row("Diretórios", "Pasta de Entrada", str(settings.get_input_path()))
+        tabela.add_row("Diretórios", "Pasta de Saída", str(settings.get_output_path()))
+        tabela.add_row("Diretórios", "Abrir pasta ao concluir", auto_open_status)
+        tabela.add_row("Síntese (TTS)", "Motor Padrão", motor_atual)
+        tabela.add_row("Síntese (TTS)", "Voz Padrão (Kokoro)", settings.get_kokoro_voice_label())
+        console.print(tabela)
+
+    @staticmethod
+    def _submenu_diretorios(settings: SettingsManager) -> None:
         while True:
             DieHowardTUI.exibir_cabecalho()
 
@@ -49,35 +74,77 @@ class DieHowardTUI:
                 if settings.get_auto_open_output()
                 else "[dim red]Desativado[/dim red]"
             )
+
+            tabela = Table(title="📁 Configurações > Diretórios e Arquivos", border_style="green")
+            tabela.add_column("Parâmetro", style="bold yellow")
+            tabela.add_column("Valor Atual", style="green")
+            tabela.add_row("Pasta de Entrada (Livros)", str(settings.get_input_path()))
+            tabela.add_row("Pasta de Saída (Áudios)", str(settings.get_output_path()))
+            tabela.add_row("Abrir pasta ao concluir", auto_open_status)
+            console.print(tabela)
+
+            console.print("\n[bold yellow]Opções de Diretórios:[/bold yellow]")
+            console.print("1. Alterar pasta padrão de [bold green]entrada[/bold green]")
+            console.print("2. Alterar pasta padrão de [bold cyan]saída[/bold cyan]")
+            console.print("3. Alternar abertura automática da pasta ao concluir")
+            console.print("4. [bold magenta]Voltar[/bold magenta]")
+
+            opcao = Prompt.ask("Escolha uma opção", choices=["1", "2", "3", "4"], default="4")
+
+            if opcao == "1":
+                novo = Prompt.ask(
+                    "\nDigite o caminho completo da nova pasta de entrada (ex: ~/Livros)"
+                )
+                sucesso, msg = settings.set_input_dir(novo)
+                cor = "green" if sucesso else "red"
+                console.print(f"[bold {cor}]{msg}[/bold {cor}]")
+                Prompt.ask("\nPressione Enter para continuar", default="")
+
+            elif opcao == "2":
+                novo = Prompt.ask(
+                    "\nDigite o caminho completo da nova pasta de saída (ex: ~/Audiobooks)"
+                )
+                sucesso, msg = settings.set_output_dir(novo)
+                cor = "green" if sucesso else "red"
+                console.print(f"[bold {cor}]{msg}[/bold {cor}]")
+                Prompt.ask("\nPressione Enter para continuar", default="")
+
+            elif opcao == "3":
+                ativo = settings.toggle_auto_open_output()
+                estado = "ativada" if ativo else "desativada"
+                console.print(f"[bold green]✔ Abertura automática {estado}![/bold green]")
+                Prompt.ask("\nPressione Enter para continuar", default="")
+
+            elif opcao == "4":
+                break
+
+    @staticmethod
+    def _submenu_motor(settings: SettingsManager) -> None:
+        while True:
+            DieHowardTUI.exibir_cabecalho()
+
             motor_atual = (
                 "[bold cyan]Kokoro-82M[/bold cyan]"
                 if settings.get_default_engine() == "kokoro"
                 else "[bold magenta]Piper TTS[/bold magenta]"
             )
 
-            tabela = Table(title="⚙️ Configurações Atuais", border_style="cyan")
+            tabela = Table(title="🤖 Configurações > Motor de Síntese (TTS)", border_style="cyan")
             tabela.add_column("Parâmetro", style="bold yellow")
             tabela.add_column("Valor Atual", style="green")
-            tabela.add_row("Motor de Síntese Padrão", motor_atual)
-            tabela.add_row("Pasta de Entrada (Livros)", str(settings.get_input_path()))
-            tabela.add_row("Pasta de Saída (Áudios)", str(settings.get_output_path()))
-            tabela.add_row("Abrir pasta ao concluir", auto_open_status)
+            tabela.add_row("Motor Padrão", motor_atual)
+            tabela.add_row("Voz Padrão (Kokoro)", settings.get_kokoro_voice_label())
             console.print(tabela)
 
-            console.print("\n[bold yellow]O que deseja alterar?[/bold yellow]")
-            console.print("1. Alterar [bold cyan]motor de síntese[/bold cyan] padrão (Kokoro / Piper)")
-            console.print("2. Alterar pasta padrão de [bold green]entrada[/bold green]")
-            console.print("3. Alterar pasta padrão de [bold cyan]saída[/bold cyan]")
-            console.print("4. Alternar abertura automática da pasta ao concluir")
-            console.print("5. Restaurar configurações padrão")
-            console.print("6. [bold magenta]Voltar ao Menu Principal[/bold magenta]")
+            console.print("\n[bold yellow]Opções de Síntese:[/bold yellow]")
+            console.print("1. Alterar motor padrão ([bold cyan]Kokoro-82M[/bold cyan] / [bold magenta]Piper TTS[/bold magenta])")
+            console.print("2. Alterar voz padrão do [bold cyan]Kokoro PT-BR[/bold cyan]")
+            console.print("3. [bold magenta]Voltar[/bold magenta]")
 
-            opcao = Prompt.ask(
-                "Escolha uma opção", choices=["1", "2", "3", "4", "5", "6"], default="6"
-            )
+            opcao = Prompt.ask("Escolha uma opção", choices=["1", "2", "3"], default="3")
 
             if opcao == "1":
-                console.print("\n[bold yellow]🤖 Selecione o Motor de Síntese Padrão:[/bold yellow]")
+                console.print("\n[bold yellow]Selecione o Motor de Síntese Padrão:[/bold yellow]")
                 console.print("1. [bold cyan]Kokoro-82M[/bold cyan] (Recomendado)")
                 console.print("2. [bold magenta]Piper TTS[/bold magenta] (Modelo mais leve)")
                 escolha_motor = Prompt.ask("Escolha o motor", choices=["1", "2"], default="1")
@@ -88,35 +155,43 @@ class DieHowardTUI:
                 Prompt.ask("\nPressione Enter para continuar", default="")
 
             elif opcao == "2":
-                novo = Prompt.ask(
-                    "\nDigite o caminho completo da nova pasta de entrada (ex: ~/Livros)"
-                )
-                sucesso, msg = settings.set_input_dir(novo)
+                console.print("\n[bold yellow]🗣️ Selecione a Voz Padrão do Kokoro PT-BR:[/bold yellow]")
+                console.print("1. pf_dora (Feminino) [dim]- Padrão[/dim]")
+                console.print("2. pm_alex (Masculino)")
+                console.print("3. pm_santa (Masculino - Grave)")
+                voz_idx = Prompt.ask("Escolha a voz", choices=["1", "2", "3"], default="1")
+                voz_map = {"1": "pf_dora", "2": "pm_alex", "3": "pm_santa"}
+                sucesso, msg = settings.set_kokoro_voice(voz_map[voz_idx])
                 cor = "green" if sucesso else "red"
                 console.print(f"[bold {cor}]{msg}[/bold {cor}]")
                 Prompt.ask("\nPressione Enter para continuar", default="")
 
             elif opcao == "3":
-                novo = Prompt.ask(
-                    "\nDigite o caminho completo da nova pasta de saída (ex: ~/Audiobooks)"
-                )
-                sucesso, msg = settings.set_output_dir(novo)
-                cor = "green" if sucesso else "red"
-                console.print(f"[bold {cor}]{msg}[/bold {cor}]")
-                Prompt.ask("\nPressione Enter para continuar", default="")
+                break
 
-            elif opcao == "4":
-                ativo = settings.toggle_auto_open_output()
-                estado = "ativada" if ativo else "desativada"
-                console.print(f"[bold green]✔ Abertura automática {estado}![/bold green]")
-                Prompt.ask("\nPressione Enter para continuar", default="")
+    @staticmethod
+    def menu_configuracoes(settings: SettingsManager) -> None:
+        while True:
+            DieHowardTUI.exibir_cabecalho()
+            DieHowardTUI._exibir_resumo_configuracoes(settings)
 
-            elif opcao == "5":
+            console.print("\n[bold yellow]Categorias de Configuração:[/bold yellow]")
+            console.print("1. 📁 [bold green]Diretórios e Arquivos[/bold green]")
+            console.print("2. 🤖 [bold cyan]Motor de Síntese (TTS)[/bold cyan]")
+            console.print("3. 🔄 [dim]Restaurar todas as configurações padrão[/dim]")
+            console.print("4. [bold magenta]Voltar ao Menu Principal[/bold magenta]")
+
+            opcao = Prompt.ask("Escolha uma categoria", choices=["1", "2", "3", "4"], default="4")
+
+            if opcao == "1":
+                DieHowardTUI._submenu_diretorios(settings)
+            elif opcao == "2":
+                DieHowardTUI._submenu_motor(settings)
+            elif opcao == "3":
                 settings.restaurar_padrao()
-                console.print("[bold green]✔ Configurações padrão restauradas![/bold green]")
+                console.print("[bold green]✔ Todas as configurações padrão foram restauradas![/bold green]")
                 Prompt.ask("\nPressione Enter para continuar", default="")
-
-            elif opcao == "6":
+            elif opcao == "4":
                 break
 
     @staticmethod
@@ -164,18 +239,6 @@ class DieHowardTUI:
             choices=[str(i) for i in range(1, len(arquivos) + 1)],
         )
         return arquivos[int(escolha) - 1].name
-
-    @staticmethod
-    def selecionar_voz(engine_tipo: str) -> str:
-        if engine_tipo == "kokoro":
-            console.print("\n[bold yellow]🗣️ Vozes do Kokoro PT-BR:[/bold yellow]")
-            console.print("1. pf_dora (Feminino)")
-            console.print("2. pm_alex (Masculino)")
-            console.print("3. pm_santa (Masculino - Grave)")
-            voz_idx = Prompt.ask("Escolha a voz", choices=["1", "2", "3"], default="1")
-            voz_map = {"1": "pf_dora", "2": "pm_alex", "3": "pm_santa"}
-            return voz_map[voz_idx]
-        return "faber"
 
     @staticmethod
     def selecionar_modo_saida() -> str:

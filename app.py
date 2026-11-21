@@ -93,17 +93,19 @@ def executar_pipeline(settings: SettingsManager):
     input_dir = settings.get_input_path()
     output_dir = settings.get_output_path()
     engine_tipo = settings.get_default_engine()
+    voz = settings.get_kokoro_voice() if engine_tipo == "kokoro" else "faber"
 
-    # 1. Seleção Interativa usando a pasta e o motor configurados
+    # 1. Seleção Interativa usando as configurações salvas
     arquivo_nome = DieHowardTUI.listar_arquivos_input(input_dir)
     if not arquivo_nome:
         Prompt.ask("\nPressione Enter para voltar ao menu", default="")
         return
 
-    nome_motor = "Kokoro-82M" if engine_tipo == "kokoro" else "Piper TTS"
-    console.print(f"\n[dim]🤖 Motor ativo: [bold]{nome_motor}[/bold] (altere em Configurações)[/dim]")
-
-    voz = DieHowardTUI.selecionar_voz(engine_tipo)
+    if engine_tipo == "kokoro":
+        info_motor = f"Kokoro-82M ({settings.get_kokoro_voice_label()})"
+    else:
+        info_motor = "Piper TTS (faber)"
+    console.print(f"\n[dim]🤖 Motor/Voz ativos: [bold]{info_motor}[/bold] (altere em Configurações)[/dim]")
 
     path_in = input_dir / arquivo_nome
     if path_in.suffix.lower() == ".txt":

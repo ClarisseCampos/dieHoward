@@ -7,6 +7,7 @@ class SettingsManager:
         "input_dir": "data/input",
         "output_dir": "data/output",
         "auto_open_output": True,
+        "default_engine": "kokoro",
     }
 
     def __init__(self, config_path: str | Path = "common/config/settings.json"):
@@ -47,6 +48,10 @@ class SettingsManager:
     def get_auto_open_output(self) -> bool:
         return bool(self.config.get("auto_open_output", True))
 
+    def get_default_engine(self) -> str:
+        engine = self.config.get("default_engine", "kokoro")
+        return engine if engine in ("kokoro", "piper") else "kokoro"
+
     def set_input_dir(self, novo_caminho: str) -> tuple[bool, str]:
         caminho = self._normalizar_caminho(novo_caminho)
         if not caminho.exists() or not caminho.is_dir():
@@ -66,6 +71,15 @@ class SettingsManager:
         self.config["output_dir"] = str(caminho)
         self._salvar_dados(self.config)
         return True, f"Pasta de saída definida para: {caminho}"
+
+    def set_default_engine(self, engine: str) -> tuple[bool, str]:
+        if engine not in ("kokoro", "piper"):
+            return False, f"Motor inválido: '{engine}'. Use 'kokoro' ou 'piper'."
+
+        self.config["default_engine"] = engine
+        self._salvar_dados(self.config)
+        nome_exibicao = "Kokoro-82M" if engine == "kokoro" else "Piper TTS"
+        return True, f"Motor padrão definido para: {nome_exibicao}"
 
     def toggle_auto_open_output(self) -> bool:
         novo_valor = not self.get_auto_open_output()

@@ -92,14 +92,18 @@ def sintetizar_trecho(engine_tipo: str, engine, voz: str, texto: str, destino: P
 def executar_pipeline(settings: SettingsManager):
     input_dir = settings.get_input_path()
     output_dir = settings.get_output_path()
+    engine_tipo = settings.get_default_engine()
 
-    # 1. Seleção Interativa usando a pasta configurada
+    # 1. Seleção Interativa usando a pasta e o motor configurados
     arquivo_nome = DieHowardTUI.listar_arquivos_input(input_dir)
     if not arquivo_nome:
         Prompt.ask("\nPressione Enter para voltar ao menu", default="")
         return
 
-    engine_tipo, voz = DieHowardTUI.selecionar_engine()
+    nome_motor = "Kokoro-82M" if engine_tipo == "kokoro" else "Piper TTS"
+    console.print(f"\n[dim]🤖 Motor ativo: [bold]{nome_motor}[/bold] (altere em Configurações)[/dim]")
+
+    voz = DieHowardTUI.selecionar_voz(engine_tipo)
 
     path_in = input_dir / arquivo_nome
     if path_in.suffix.lower() == ".txt":
@@ -110,7 +114,7 @@ def executar_pipeline(settings: SettingsManager):
     output_dir.mkdir(parents=True, exist_ok=True)
     normalizer = TextNormalizer()
 
-    # Inicializa o motor escolhido uma única vez
+    # Inicializa o motor configurado uma única vez
     if engine_tipo == "kokoro":
         engine = KokoroCPUEngine(
             model_path="models/kokoro/kokoro-v1.0.onnx",

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DieHoward</title>
+  </head>
+  <body style="font-family: sans-serif; padding: 16px;">
+    <h2>DieHoward - Síntese de Áudio</h2>
+
+    <div>
+      <label>Livro (data/input): </label>
+      <select id="arquivo"></select>
+      <button type="button" id="btn-atualizar">Atualizar</button>
+    </div>
+    <br />
+
+    <div>
+      <label>Modo de saída: </label>
+      <select id="modo">
+        <option value="unico">Arquivo único (.wav)</option>
+        <option value="capitulos">Separado por capítulos</option>
+      </select>
+    </div>
+    <br />
+
+    <div>
+      <label>Motor: </label>
+      <select id="engine">
+        <option value="kokoro">Kokoro-82M</option>
+        <option value="piper">Piper TTS</option>
+      </select>
+    </div>
+    <br />
+
+    <div>
+      <label>Voz (Kokoro): </label>
+      <select id="voz">
+        <option value="pf_dora">pf_dora (Feminino)</option>
+        <option value="pm_alex">pm_alex (Masculino)</option>
+        <option value="pm_santa">pm_santa (Masculino - Grave)</option>
+      </select>
+    </div>
+    <br />
+
+    <div>
+      <label>Velocidade: </label>
+      <input id="velocidade" type="number" step="0.05" min="0.5" max="2.0" value="0.85" />
+    </div>
+    <br />
+
+    <button type="button" id="btn-iniciar">Iniciar Síntese</button>
+
+    <hr />
+
+    <div>
+      <div id="status-texto">Aguardando...</div>
+      <progress id="barra" value="0" max="100" style="width: 100%;"></progress>
+    </div>
+
+    <h4>Logs:</h4>
+    <pre id="logs" style="background: #eee; padding: 8px; height: 180px; overflow-y: auto;"></pre>
+
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>

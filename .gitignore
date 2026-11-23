@@ -46,3 +46,5 @@ data/temp/*
 common/config/settings.json
 
 common/config/settings.json
+
+gui/src-tauri/target/

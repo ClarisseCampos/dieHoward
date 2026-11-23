@@ -44,7 +44,15 @@ def abrir_pasta_grafica(caminho: Path) -> None:
         )
 
 
-def sintetizar_trecho(engine_tipo: str, engine, voz: str, texto: str, destino: Path, rotulo: str):
+def sintetizar_trecho(
+    engine_tipo: str,
+    engine,
+    voz: str,
+    velocidade: float,
+    texto: str,
+    destino: Path,
+    rotulo: str,
+):
     """Executa a síntese de um bloco de texto (livro inteiro ou um capítulo)."""
     with DieHowardTUI.criar_barra_progresso() as progress:
         if engine_tipo == "kokoro":
@@ -61,7 +69,7 @@ def sintetizar_trecho(engine_tipo: str, engine, voz: str, texto: str, destino: P
                 texto=texto,
                 output_path=str(destino),
                 voice=voz,
-                speed=0.83,
+                speed=velocidade,
                 progress_callback=atualizar_barra,
             )
 
@@ -94,6 +102,7 @@ def executar_pipeline(settings: SettingsManager):
     output_dir = settings.get_output_path()
     engine_tipo = settings.get_default_engine()
     voz = settings.get_kokoro_voice() if engine_tipo == "kokoro" else "faber"
+    velocidade = settings.get_speech_speed()
 
     # 1. Seleção Interativa usando as configurações salvas
     arquivo_nome = DieHowardTUI.listar_arquivos_input(input_dir)
@@ -105,7 +114,12 @@ def executar_pipeline(settings: SettingsManager):
         info_motor = f"Kokoro-82M ({settings.get_kokoro_voice_label()})"
     else:
         info_motor = "Piper TTS (faber)"
-    console.print(f"\n[dim]🤖 Motor/Voz ativos: [bold]{info_motor}[/bold] (altere em Configurações)[/dim]")
+
+    console.print(
+        f"\n[dim]🤖 Motor/Voz: [bold]{info_motor}[/bold] | "
+        f"Velocidade: [bold]{settings.get_speech_speed_label()}[/bold] "
+        f"(altere em Configurações)[/dim]"
+    )
 
     path_in = input_dir / arquivo_nome
     if path_in.suffix.lower() == ".txt":
@@ -125,7 +139,7 @@ def executar_pipeline(settings: SettingsManager):
     else:
         engine = PiperEngine(
             model_path="models/piper/pt_BR-faber-medium.onnx",
-            length_scale="1.4",
+            length_scale=settings.get_piper_length_scale(),
         )
 
     try:
@@ -135,7 +149,15 @@ def executar_pipeline(settings: SettingsManager):
             texto_tratado = normalizer.processar(texto_bruto)
 
             path_out = output_dir / f"{path_in.stem}_{engine_tipo}.wav"
-            sintetizar_trecho(engine_tipo, engine, voz, texto_tratado, path_out, "Sintetizando livro")
+            sintetizar_trecho(
+                engine_tipo,
+                engine,
+                voz,
+                velocidade,
+                texto_tratado,
+                path_out,
+                "Sintetizando livro",
+            )
 
             console.print("\n[bold green]✔ Processamento concluído a 100%![/bold green]")
             console.print(f"🔊 Áudio final disponível em: [bold yellow]{path_out}[/bold yellow]\n")
@@ -165,6 +187,7 @@ def executar_pipeline(settings: SettingsManager):
                     engine_tipo,
                     engine,
                     voz,
+                    velocidade,
                     texto_tratado,
                     destino_cap,
                     f"Cap. {idx}/{len(capitulos)} ({titulo[:25]})",

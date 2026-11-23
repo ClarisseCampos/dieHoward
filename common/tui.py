@@ -62,6 +62,7 @@ class DieHowardTUI:
         tabela.add_row("Diretórios", "Abrir pasta ao concluir", auto_open_status)
         tabela.add_row("Síntese (TTS)", "Motor Padrão", motor_atual)
         tabela.add_row("Síntese (TTS)", "Voz Padrão (Kokoro)", settings.get_kokoro_voice_label())
+        tabela.add_row("Síntese (TTS)", "Velocidade de Reprodução", settings.get_speech_speed_label())
         console.print(tabela)
 
     @staticmethod
@@ -134,14 +135,16 @@ class DieHowardTUI:
             tabela.add_column("Valor Atual", style="green")
             tabela.add_row("Motor Padrão", motor_atual)
             tabela.add_row("Voz Padrão (Kokoro)", settings.get_kokoro_voice_label())
+            tabela.add_row("Velocidade de Reprodução", settings.get_speech_speed_label())
             console.print(tabela)
 
             console.print("\n[bold yellow]Opções de Síntese:[/bold yellow]")
             console.print("1. Alterar motor padrão ([bold cyan]Kokoro-82M[/bold cyan] / [bold magenta]Piper TTS[/bold magenta])")
             console.print("2. Alterar voz padrão do [bold cyan]Kokoro PT-BR[/bold cyan]")
-            console.print("3. [bold magenta]Voltar[/bold magenta]")
+            console.print("3. Alterar [bold green]velocidade de reprodução[/bold green]")
+            console.print("4. [bold magenta]Voltar[/bold magenta]")
 
-            opcao = Prompt.ask("Escolha uma opção", choices=["1", "2", "3"], default="3")
+            opcao = Prompt.ask("Escolha uma opção", choices=["1", "2", "3", "4"], default="4")
 
             if opcao == "1":
                 console.print("\n[bold yellow]Selecione o Motor de Síntese Padrão:[/bold yellow]")
@@ -167,6 +170,40 @@ class DieHowardTUI:
                 Prompt.ask("\nPressione Enter para continuar", default="")
 
             elif opcao == "3":
+                console.print("\n[bold yellow]⏩ Selecione a Velocidade de Reprodução:[/bold yellow]")
+                console.print("1. 0.75x (Lento)")
+                console.print("2. 0.85x (Audiobook - Padrão)")
+                console.print("3. 1.00x (Normal)")
+                console.print("4. 1.15x (Rápido)")
+                console.print("5. 1.30x (Muito rápido)")
+                console.print("6. [bold cyan]Digitar valor personalizado[/bold cyan] (ex: 0.90)")
+
+                vel_idx = Prompt.ask(
+                    "Escolha a velocidade",
+                    choices=["1", "2", "3", "4", "5", "6"],
+                    default="2",
+                )
+                vel_map = {
+                    "1": 0.75,
+                    "2": 0.85,
+                    "3": 1.00,
+                    "4": 1.15,
+                    "5": 1.30,
+                }
+
+                if vel_idx == "6":
+                    valor_escolhido = Prompt.ask(
+                        "\nDigite a velocidade desejada (entre 0.50 e 2.00)"
+                    )
+                else:
+                    valor_escolhido = vel_map[vel_idx]
+
+                sucesso, msg = settings.set_speech_speed(valor_escolhido)
+                cor = "green" if sucesso else "red"
+                console.print(f"[bold {cor}]{msg}[/bold {cor}]")
+                Prompt.ask("\nPressione Enter para continuar", default="")
+
+            elif opcao == "4":
                 break
 
     @staticmethod

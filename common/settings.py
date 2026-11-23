@@ -9,12 +9,21 @@ class SettingsManager:
         "auto_open_output": True,
         "default_engine": "kokoro",
         "kokoro_voice": "pf_dora",
+        "speech_speed": 0.85,
     }
 
     KOKORO_VOICES = {
         "pf_dora": "pf_dora (Feminino)",
         "pm_alex": "pm_alex (Masculino)",
         "pm_santa": "pm_santa (Masculino - Grave)",
+    }
+
+    SPEED_PRESETS = {
+        0.75: "0.75x (Lento)",
+        0.85: "0.85x (Audiobook - Padrão)",
+        1.00: "1.00x (Normal)",
+        1.15: "1.15x (Rápido)",
+        1.30: "1.30x (Muito rápido)",
     }
 
     def __init__(self, config_path: str | Path = "common/config/settings.json"):
@@ -67,6 +76,27 @@ class SettingsManager:
         voz = self.get_kokoro_voice()
         return self.KOKORO_VOICES.get(voz, "pf_dora (Feminino)")
 
+    def get_speech_speed(self) -> float:
+        try:
+            speed = float(self.config.get("speech_speed", 0.85))
+            if 0.5 <= speed <= 2.0:
+                return round(speed, 2)
+        except (TypeError, ValueError):
+            pass
+        return 0.85
+
+    def get_speech_speed_label(self) -> str:
+        speed = self.get_speech_speed()
+        for preset_val, label in self.SPEED_PRESETS.items():
+            if abs(speed - preset_val) < 0.001:
+                return label
+        return f"{speed:.2f}x (Personalizado)"
+
+    def get_piper_length_scale(self) -> str:
+        """Converte o multiplicador de velocidade para o length_scale inverso do Piper."""
+        speed = self.get_speech_speed()
+        return f"{1.0 / speed:.2f}"
+
     def set_input_dir(self, novo_caminho: str) -> tuple[bool, str]:
         caminho = self._normalizar_caminho(novo_caminho)
         if not caminho.exists() or not caminho.is_dir():
@@ -103,6 +133,20 @@ class SettingsManager:
         self.config["kokoro_voice"] = voz
         self._salvar_dados(self.config)
         return True, f"Voz padrão do Kokoro definida para: {self.KOKORO_VOICES[voz]}"
+
+    def set_speech_speed(self, nova_velocidade: float | str) -> tuple[bool, str]:
+        try:
+            valor_str = str(nova_velocidade).strip().replace(",", ".")
+            valor = round(float(valor_str), 2)
+        except ValueError:
+            return False, "Valor inválido. Digite um número decimal (ex: 0.85 ou 1.10)."
+
+        if not (0.5 <= valor <= 2.0):
+            return False, "A velocidade deve estar entre 0.50x e 2.00x."
+
+        self.config["speech_speed"] = valor
+        self._salvar_dados(self.config)
+        return True, f"Velocidade de reprodução definida para: {self.get_speech_speed_label()}"
 
     def toggle_auto_open_output(self) -> bool:
         novo_valor = not self.get_auto_open_output()

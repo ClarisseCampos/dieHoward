@@ -7,6 +7,7 @@ from pathlib import Path
 from common.normalizer import TextNormalizer
 from common.parser import DocumentParser
 from common.settings import SettingsManager, PROJECT_ROOT
+from common.model_downloader import ModelDownloader
 from engines.kokoro.kokoro_engine import KokoroCPUEngine
 from engines.piper.piper_engine import PiperEngine
 
@@ -17,22 +18,21 @@ class AudioPipeline:
         self.engine_tipo = settings.get_default_engine()
         self.voz = settings.get_kokoro_voice() if self.engine_tipo == "kokoro" else "faber"
         self.velocidade = settings.get_speech_speed()
-        
-        # Inicializa o normalizador na forma padrão (compatível com a versão que você reverteu)
         self.normalizer = TextNormalizer()
-        
         self.engine = self._inicializar_motor()
 
     def _inicializar_motor(self):
+        ModelDownloader.garantir_modelos(self.engine_tipo)
+
         if self.engine_tipo == "kokoro":
             return KokoroCPUEngine(
                 model_path=str(PROJECT_ROOT / "models" / "kokoro" / "kokoro-v1.0.onnx"),
-                voices_path=str(PROJECT_ROOT / "models" / "kokoro" / "voices-v1.0.bin")
+                voices_path=str(PROJECT_ROOT / "models" / "kokoro" / "voices-v1.0.bin"),
             )
         else:
             return PiperEngine(
                 model_path=str(PROJECT_ROOT / "models" / "piper" / "pt_BR-faber-medium.onnx"),
-                length_scale=self.settings.get_piper_length_scale()
+                length_scale=self.settings.get_piper_length_scale(),
             )
 
     @staticmethod
@@ -88,7 +88,7 @@ class AudioPipeline:
 
             nome_wav = f"{idx:02d}_{self.limpar_nome_arquivo(titulo)}.wav"
             destino_cap = pasta_saida / nome_wav
-            
+
             rotulo = f"Cap. {idx}/{len(capitulos)} ({titulo[:25]})"
             atualizar_barra = on_progress_start(self.engine_tipo, rotulo)
 
@@ -99,5 +99,5 @@ class AudioPipeline:
 
         if self.settings.get_auto_open_output():
             self.abrir_pasta_grafica(pasta_saida)
-            
+
         return pasta_saida

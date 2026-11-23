@@ -24,8 +24,9 @@ source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# 3. Garante estrutura de pastas locais (ignoradas pelo Git)
+# 3. Garante estrutura de pastas locais e baixa os modelos TTS se ausentes
 mkdir -p data/input data/output data/temp models/kokoro models/piper
+python -c "from common.model_downloader import ModelDownloader; ModelDownloader.garantir_modelos()"
 
 # 4. Permissões de execução
 chmod +x "$PROJECT_DIR/diehoward.sh"
@@ -60,7 +61,7 @@ EOF
 
 chmod +x "$DESKTOP_FILE"
 
-# 7. Atualiza o cache de menus do desktop (Linux Mint / Cinnamon / XDG)
+# 7. Atualiza o cache de menus do desktop
 if command -v update-desktop-database &> /dev/null; then
     update-desktop-database "$DESKTOP_DIR" 2>/dev/null || true
 fi

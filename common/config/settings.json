@@ -1,6 +1,6 @@
 {
-    "input_dir": "data/input",
-    "output_dir": "/home/clarisse/Desktop",
+    "input_dir": "/home/clarisse/folders/die-howard/data/input",
+    "output_dir": "/home/clarisse/folders/die-howard/data/output",
     "auto_open_output": true,
     "default_engine": "kokoro",
     "kokoro_voice": "pf_dora",

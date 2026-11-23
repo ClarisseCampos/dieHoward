@@ -20,32 +20,26 @@ Thumbs.db
 # Logs e Temporários
 *.log
 *.tmp
-data/temp/*
-!data/temp/.gitkeep
 
-# Áudios Gerados (Entrada e Saída de Dados)
-data/output/*
-!data/output/.gitkeep
+# Configurações locais do usuário (caminhos absolutos da máquina)
+common/config/settings.json
 
-# Textos de teste pessoais (opcional: ignora textos pesados de teste, mantendo a estrutura)
-data/input/*
-!data/input/.gitkeep
-
-# Modelos do Kokoro e do Piper (Arquivos pesados e binários)
-engines/piper/models/*.onnx
-engines/piper/models/*.json
-engines/kokoro/models/*.onnx
-engines/kokoro/models/*.bin
-
-# Ignora apenas arquivos de mídia pesados
-*.wav
-*.mp3
-*.flac
-*.txt
+# Modelos pesados e binários (baixados localmente)
 models/
 *.onnx
 *.bin
+
+# Arquivos de mídia gerados
+*.wav
+*.mp3
+*.flac
+
+# Pastas de dados locais (mantém apenas a estrutura com .gitkeep)
 data/input/*
+!data/input/.gitkeep
+
 data/output/*
+!data/output/.gitkeep
+
 data/temp/*
-common/config/settings.json
+!data/temp/.gitkeep

@@ -44,7 +44,7 @@ fi
 echo "⬇️ Instalando dependências do requirements.txt..."
 source .venv/bin/activate
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install -r app/requirements.txt
 
 # 4. Garante estrutura de pastas locais e baixa os modelos TTS se ausentes
 mkdir -p data/input data/output data/temp models/kokoro models/piper

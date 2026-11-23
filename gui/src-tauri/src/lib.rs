@@ -20,8 +20,8 @@ fn encontrar_raiz_projeto() -> PathBuf {
 
     for base in candidatos {
         let mut dir = base;
-        for _ in 0..5 {
-            if dir.join("gui_bridge.py").exists() {
+        for _ in 0..6 {
+            if dir.join("app").join("gui_bridge.py").exists() {
                 return dir;
             }
             if let Some(pai) = dir.parent() {
@@ -80,7 +80,11 @@ fn iniciar_sintese(
     let python_bin = if python_venv.exists() {
         python_venv
     } else {
-        PathBuf::from(if cfg!(target_os = "windows") { "python" } else { "python3" })
+        PathBuf::from(if cfg!(target_os = "windows") {
+            "python"
+        } else {
+            "python3"
+        })
     };
 
     let caminho_arquivo = if Path::new(&arquivo).is_absolute() {
@@ -89,10 +93,12 @@ fn iniciar_sintese(
         raiz.join("data").join("input").join(&arquivo)
     };
 
+    let script_bridge = raiz.join("app").join("gui_bridge.py");
+
     thread::spawn(move || {
         let processo = Command::new(&python_bin)
             .current_dir(&raiz)
-            .arg("gui_bridge.py")
+            .arg(&script_bridge)
             .arg("--arquivo")
             .arg(&caminho_arquivo)
             .arg("--modo")
@@ -103,6 +109,7 @@ fn iniciar_sintese(
             .arg(&voz)
             .arg("--velocidade")
             .arg(&velocidade)
+            .env("PYTHONPATH", &raiz)
             .env("PYTHONUTF8", "1")
             .env("PYTHONIOENCODING", "utf-8")
             .stdout(Stdio::piped())

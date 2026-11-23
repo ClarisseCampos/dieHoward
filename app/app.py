@@ -5,6 +5,15 @@ from common.settings import SettingsManager
 from common.pipeline import AudioPipeline
 
 
+import sys
+from pathlib import Path
+
+# Adiciona a pasta raiz (dieHoward/) ao caminho de busca do Python
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+
 def executar_fluxo(settings: SettingsManager):
     input_dir = settings.get_input_path()
     output_dir = settings.get_output_path()

@@ -48,3 +48,7 @@ common/config/settings.json
 common/config/settings.json
 
 gui/src-tauri/target/
+
+DieHoward.exe
+
+WebView2Loader.dll

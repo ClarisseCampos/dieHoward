@@ -7,17 +7,31 @@ use std::thread;
 use tauri::{Emitter, Window};
 
 fn encontrar_raiz_projeto() -> PathBuf {
-    let mut dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    for _ in 0..4 {
-        if dir.join("gui_bridge.py").exists() {
-            return dir;
-        }
-        if let Some(pai) = dir.parent() {
-            dir = pai.to_path_buf();
-        } else {
-            break;
+    let mut candidatos = Vec::new();
+
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            candidatos.push(exe_dir.to_path_buf());
         }
     }
+    if let Ok(cwd) = std::env::current_dir() {
+        candidatos.push(cwd);
+    }
+
+    for base in candidatos {
+        let mut dir = base;
+        for _ in 0..5 {
+            if dir.join("gui_bridge.py").exists() {
+                return dir;
+            }
+            if let Some(pai) = dir.parent() {
+                dir = pai.to_path_buf();
+            } else {
+                break;
+            }
+        }
+    }
+
     PathBuf::from(".")
 }
 

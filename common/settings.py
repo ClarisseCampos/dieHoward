@@ -1,11 +1,14 @@
 import json
 from pathlib import Path
 
+# Fixa a raiz do projeto (duas pastas acima de common/settings.py)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 
 class SettingsManager:
     DEFAULT_CONFIG = {
-        "input_dir": "data/input",
-        "output_dir": "data/output",
+        "input_dir": str(PROJECT_ROOT / "data" / "input"),
+        "output_dir": str(PROJECT_ROOT / "data" / "output"),
         "auto_open_output": True,
         "default_engine": "kokoro",
         "kokoro_voice": "pf_dora",
@@ -26,7 +29,9 @@ class SettingsManager:
         1.30: "1.30x (Muito rápido)",
     }
 
-    def __init__(self, config_path: str | Path = "common/config/settings.json"):
+    def __init__(self, config_path: str | Path = None):
+        if config_path is None:
+            config_path = PROJECT_ROOT / "common" / "config" / "settings.json"
         self.config_path = Path(config_path)
         self.config = self._carregar()
 
@@ -53,7 +58,11 @@ class SettingsManager:
     @staticmethod
     def _normalizar_caminho(caminho_str: str) -> Path:
         limpo = caminho_str.strip().strip("'\"")
-        return Path(limpo).expanduser()
+        caminho = Path(limpo).expanduser()
+        # Se for um caminho relativo, resolve a partir da raiz real do projeto
+        if not caminho.is_absolute():
+            caminho = PROJECT_ROOT / caminho
+        return caminho
 
     def get_input_path(self) -> Path:
         return self._normalizar_caminho(self.config["input_dir"])
@@ -93,7 +102,6 @@ class SettingsManager:
         return f"{speed:.2f}x (Personalizado)"
 
     def get_piper_length_scale(self) -> str:
-        """Converte o multiplicador de velocidade para o length_scale inverso do Piper."""
         speed = self.get_speech_speed()
         return f"{1.0 / speed:.2f}"
 
@@ -101,7 +109,6 @@ class SettingsManager:
         caminho = self._normalizar_caminho(novo_caminho)
         if not caminho.exists() or not caminho.is_dir():
             return False, f"A pasta '{caminho}' não existe ou não é um diretório válido."
-
         self.config["input_dir"] = str(caminho)
         self._salvar_dados(self.config)
         return True, f"Pasta de entrada definida para: {caminho}"
@@ -112,15 +119,13 @@ class SettingsManager:
             caminho.mkdir(parents=True, exist_ok=True)
         except OSError as e:
             return False, f"Não foi possível criar/acessar a pasta '{caminho}': {e}"
-
         self.config["output_dir"] = str(caminho)
         self._salvar_dados(self.config)
         return True, f"Pasta de saída definida para: {caminho}"
 
     def set_default_engine(self, engine: str) -> tuple[bool, str]:
         if engine not in ("kokoro", "piper"):
-            return False, f"Motor inválido: '{engine}'. Use 'kokoro' ou 'piper'."
-
+            return False, f"Motor inválido: '{engine}'."
         self.config["default_engine"] = engine
         self._salvar_dados(self.config)
         nome_exibicao = "Kokoro-82M" if engine == "kokoro" else "Piper TTS"
@@ -129,7 +134,6 @@ class SettingsManager:
     def set_kokoro_voice(self, voz: str) -> tuple[bool, str]:
         if voz not in self.KOKORO_VOICES:
             return False, f"Voz inválida: '{voz}'."
-
         self.config["kokoro_voice"] = voz
         self._salvar_dados(self.config)
         return True, f"Voz padrão do Kokoro definida para: {self.KOKORO_VOICES[voz]}"
@@ -139,14 +143,12 @@ class SettingsManager:
             valor_str = str(nova_velocidade).strip().replace(",", ".")
             valor = round(float(valor_str), 2)
         except ValueError:
-            return False, "Valor inválido. Digite um número decimal (ex: 0.85 ou 1.10)."
-
+            return False, "Valor inválido."
         if not (0.5 <= valor <= 2.0):
             return False, "A velocidade deve estar entre 0.50x e 2.00x."
-
         self.config["speech_speed"] = valor
         self._salvar_dados(self.config)
-        return True, f"Velocidade de reprodução definida para: {self.get_speech_speed_label()}"
+        return True, f"Velocidade definida para: {self.get_speech_speed_label()}"
 
     def toggle_auto_open_output(self) -> bool:
         novo_valor = not self.get_auto_open_output()

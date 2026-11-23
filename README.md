@@ -40,6 +40,15 @@ Este texto serviu de *benchmark* (base de testes) para rastrear a evolução do 
 
 ## 3. Instalação e Uso (Linux)
 
+### Opção 1: Instalação Direta (Não requer `git`)
+
+```bash
+curl -fL [https://github.com/ClarisseCampos/dieHoward/archive/refs/heads/main.tar.gz](https://github.com/ClarisseCampos/dieHoward/archive/refs/heads/main.tar.gz) -o dieHoward.tar.gz
+tar -xzf dieHoward.tar.gz
+cd dieHoward-main
+chmod +x install.sh
+./install.sh
+
 ### Instalação Automatizada
 
 ```bash

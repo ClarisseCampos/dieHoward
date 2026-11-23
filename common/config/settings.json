@@ -1,4 +1,8 @@
 {
     "input_dir": "data/input",
-    "output_dir": "/home/clarisse/Desktop"
+    "output_dir": "/home/clarisse/Desktop",
+    "auto_open_output": true,
+    "default_engine": "kokoro",
+    "kokoro_voice": "pf_dora",
+    "speech_speed": 0.85
 }

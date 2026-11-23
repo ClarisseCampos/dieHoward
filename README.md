@@ -43,20 +43,25 @@ Este texto serviu de *benchmark* (base de testes) para rastrear a evolução do 
 ### Opção 1: Instalação Direta (Não requer `git`)
 
 ```bash
-curl -fL [https://github.com/ClarisseCampos/dieHoward/archive/refs/heads/main.tar.gz](https://github.com/ClarisseCampos/dieHoward/archive/refs/heads/main.tar.gz) -o dieHoward.tar.gz
+curl -fL https://github.com/ClarisseCampos/dieHoward/archive/refs/heads/main.tar.gz -o dieHoward.tar.gz
 tar -xzf dieHoward.tar.gz
 cd dieHoward-main
 chmod +x install.sh
 ./install.sh
+```
 
-### Instalação Automatizada
+### Opção 2: Via `git clone`
 
 ```bash
-git clone https://github.com/ClarisseCampos/die-howard.git
-cd die-howard
+git clone https://github.com/ClarisseCampos/dieHoward.git
+cd dieHoward
 chmod +x install.sh
 ./install.sh
 ```
+
+> **Pré-requisitos de sistema (instalações mínimas/servidor):** Python `3.10+` e `libsndfile`.
+> * **Ubuntu / Linux Mint:** `sudo apt install -y python3 python3-venv libsndfile1`
+> * **Rocky Linux / Fedora / RHEL:** `sudo dnf install -y python3.11 libsndfile`
 
 O script `install.sh` realiza todo o preparo automaticamente:
 1. Cria o ambiente virtual Python (`.venv`) e instala as dependências do `requirements.txt`.
@@ -80,14 +85,14 @@ O script `install.sh` realiza todo o preparo automaticamente:
 * **CPU:** AMD Ryzen 5 3400G
 * **GPU Integrada:** Radeon Vega Graphics
 
-**Premissa de Engenharia:** Não se deve presumir a existência de uma GPU moderna com grande quantidade de VRAM. Toda solução implementada deve levar em conta o custo computacional e rodar satisfatoriamente em configurações modestas, aproveitando aceleração NVIDIA (CUDA) automaticamente apenas quando disponível no sistema.
+**Premissa de Engenharia:** Não se deve presumir a existência de uma GPU moderna com grande quantidade de VRAM. Toda solução implementada leva em conta o custo computacional e rodar satisfatoriamente em configurações modestas, aproveitando aceleração NVIDIA (CUDA) automaticamente apenas quando disponível no sistema.
 
 ---
 
 ## 5. Árvore do Projeto
 
 ```text
-die-howard/
+dieHoward/
 ├── app.py                     # Ponto de entrada da interface de terminal (TUI)
 ├── install.sh                 # Instalador automatizado e criador de atalho .desktop
 ├── diehoward.sh               # Lançador portável do ambiente virtual

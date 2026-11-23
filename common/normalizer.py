@@ -70,6 +70,7 @@ class TextNormalizer:
         return texto
 
     def processar(self, texto: str) -> str:
+        texto = texto.encode("utf-8", errors="ignore").decode("utf-8")
         # 1. Remove caracteres de controle invisíveis, preservando quebras de linha (\n)
         texto = "".join(char for char in texto if char.isprintable() or char in "\n\t")
 

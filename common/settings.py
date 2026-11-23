@@ -1,5 +1,15 @@
+import os
 import json
 from pathlib import Path
+
+
+def _caminho_de_outro_so(caminho_str: str) -> bool:
+    if os.name == "nt" and caminho_str.startswith("/"):
+        return True  # Caminho estilo Linux/macOS rodando no Windows
+    if os.name != "nt" and len(caminho_str) >= 2 and caminho_str[1] == ":":
+        return True  # Caminho estilo Windows (C:\...) rodando no Linux
+    return False
+
 
 # Fixa a raiz do projeto (duas pastas acima de common/settings.py)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -46,6 +56,18 @@ class SettingsManager:
                 dados = json.load(f)
             config_mesclada = self.DEFAULT_CONFIG.copy()
             config_mesclada.update(dados)
+
+            alterado = False
+            if _caminho_de_outro_so(config_mesclada.get("input_dir", "")):
+                config_mesclada["input_dir"] = self.DEFAULT_CONFIG["input_dir"]
+                alterado = True
+            if _caminho_de_outro_so(config_mesclada.get("output_dir", "")):
+                config_mesclada["output_dir"] = self.DEFAULT_CONFIG["output_dir"]
+                alterado = True
+
+            if alterado:
+                self._salvar_dados(config_mesclada)
+
             return config_mesclada
         except (json.JSONDecodeError, OSError):
             return self.DEFAULT_CONFIG.copy()

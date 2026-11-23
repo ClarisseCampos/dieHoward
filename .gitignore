@@ -43,3 +43,6 @@ data/output/*
 
 data/temp/*
 !data/temp/.gitkeep
+common/config/settings.json
+
+common/config/settings.json

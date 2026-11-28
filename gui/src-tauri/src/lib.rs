@@ -4,7 +4,7 @@ use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::thread;
-use tauri::{Emitter, Window};
+use tauri::{Emitter, Manager, Window};
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -245,6 +245,14 @@ fn iniciar_sintese(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            if let Some(janela) = app.get_webview_window("main") {
+                if let Some(icone) = app.default_window_icon() {
+                    let _ = janela.set_icon(icone.clone());
+                }
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             obter_configuracoes,
             salvar_configuracoes,

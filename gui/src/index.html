@@ -3,64 +3,151 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DieHoward</title>
+    <meta name="description" content="DieHoward: transforme livros em audiolivros com síntese de voz local." />
+    <meta name="theme-color" content="#c6f36b" />
+    <title>DieHoward — Laboratório de Áudio</title>
+    <link rel="stylesheet" href="styles.css" />
   </head>
-  <body style="font-family: sans-serif; padding: 16px;">
-    <h2>DieHoward - Síntese de Áudio</h2>
+  <body>
+    <div class="app">
+      <div class="moldura">
+        <div class="barra-janela">
+          <div class="controles-janela" aria-hidden="true"><span></span><span></span><span></span></div>
+          <span class="barra-titulo">DIEHOWARD_OS</span>
+          <span class="barra-versao">LOCAL / V.01</span>
+        </div>
 
-    <div>
-      <label>Livro (data/input): </label>
-      <select id="arquivo"></select>
-      <button type="button" id="btn-atualizar">Atualizar</button>
+        <header class="topo">
+          <div class="marca">
+            <div class="onda" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+            <div>
+              <p class="sobrelinha">LABORATÓRIO DE ÁUDIO</p>
+              <h1>Die<span>/</span>Howard</h1>
+              <p class="subtitulo">Síntese de áudio para livros</p>
+            </div>
+          </div>
+          <div class="topo-nota" aria-label="Sistema pronto">
+            <strong><span class="luz" aria-hidden="true"></span>SISTEMA PRONTO</strong>
+            <small>KOKORO + PIPER · PT-BR</small>
+          </div>
+        </header>
+
+        <main class="grade">
+          <section class="painel pastas">
+            <div class="painel-topo">
+              <h2><span>01</span>Pastas</h2>
+              <small>ORIGEM / DESTINO</small>
+            </div>
+            <div class="campo">
+              <label for="pasta-entrada">Entrada (livros) <small>.txt · .pdf · .epub</small></label>
+              <div class="linha">
+                <input id="pasta-entrada" type="text" spellcheck="false" />
+                <button type="button" id="btn-escolher-entrada" class="btn-sec">Escolher…</button>
+              </div>
+            </div>
+            <div class="campo">
+              <label for="pasta-saida">Saída (áudios)</label>
+              <div class="linha">
+                <input id="pasta-saida" type="text" spellcheck="false" />
+                <button type="button" id="btn-escolher-saida" class="btn-sec">Escolher…</button>
+              </div>
+            </div>
+            <label class="interruptor">
+              <input id="auto-abrir" type="checkbox" />
+              <span class="trilho"></span>
+              Abrir pasta de saída ao concluir
+            </label>
+            <div class="rodape-pastas">
+              <span id="aviso-config" class="aviso"></span>
+              <button type="button" id="btn-restaurar" class="btn-link">Restaurar padrões</button>
+            </div>
+          </section>
+
+          <section class="painel sintese">
+            <div class="painel-topo">
+              <h2><span>02</span>Síntese</h2>
+              <small>TEXTO → VOZ</small>
+            </div>
+
+            <div class="campo">
+              <label for="arquivo">Livro <small id="livro-info"></small></label>
+              <div class="linha">
+                <select id="arquivo"></select>
+                <button type="button" id="btn-atualizar" class="btn-sec" title="Atualizar lista">↻ Atualizar</button>
+              </div>
+            </div>
+
+            <div class="campo">
+              <label for="modo">Modo de saída</label>
+              <select id="modo" aria-describedby="modo-dica">
+                <option value="unico">Arquivo único (.wav)</option>
+                <option value="capitulos">Separado por capítulos</option>
+              </select>
+              <small id="modo-dica" class="dica"></small>
+            </div>
+
+            <div class="duas">
+              <div class="campo">
+                <label for="engine">Motor</label>
+                <select id="engine">
+                  <option value="kokoro">Kokoro-82M (recomendado)</option>
+                  <option value="piper">Piper TTS (mais leve)</option>
+                </select>
+              </div>
+              <div class="campo" id="campo-voz">
+                <label for="voz">Voz</label>
+                <select id="voz">
+                  <option value="pf_dora">pf_dora (Feminino)</option>
+                  <option value="pm_alex">pm_alex (Masculino)</option>
+                  <option value="pm_santa">pm_santa (Masculino - Grave)</option>
+                </select>
+                <div id="voz-piper" class="voz-fixa" hidden>faber <small>voz única do Piper</small></div>
+              </div>
+            </div>
+
+            <div class="campo campo-velocidade">
+              <label for="velocidade">Velocidade <output id="vel-valor">0.85×</output></label>
+              <input id="velocidade" type="range" step="0.05" min="0.5" max="2.0" value="0.85" />
+              <div class="chips" id="chips-vel">
+                <button type="button" data-v="0.75">0.75 Lento</button>
+                <button type="button" data-v="0.85">0.85 Audiobook</button>
+                <button type="button" data-v="1">1.00 Normal</button>
+                <button type="button" data-v="1.15">1.15 Rápido</button>
+                <button type="button" data-v="1.3">1.30 Muito rápido</button>
+              </div>
+            </div>
+
+            <button type="button" id="btn-iniciar" class="btn-pri"><span aria-hidden="true">▶</span> Iniciar Síntese</button>
+          </section>
+
+          <section class="painel progresso">
+            <div class="painel-topo">
+              <h2><span>03</span>Progresso</h2>
+              <small>MONITOR</small>
+            </div>
+            <div class="status-caixa">
+              <span class="status-rotulo">STATUS_ATUAL</span>
+              <div id="status-texto" class="status">Aguardando...</div>
+            </div>
+            <div class="progresso-caixa">
+              <div class="progresso-rotulo"><span>PROCESSAMENTO</span><span>0—100%</span></div>
+              <progress id="barra" value="0" max="100"></progress>
+            </div>
+
+            <div class="logs-topo">
+              <h3>Registro de atividade</h3>
+              <span><i class="luz" aria-hidden="true"></i>AO VIVO</span>
+            </div>
+            <pre id="logs"></pre>
+          </section>
+        </main>
+
+        <footer class="rodape">
+          <span>DIEHOWARD / TEXTO → VOZ</span>
+          <span>PROCESSAMENTO LOCAL. SEM NUVEM.</span>
+        </footer>
+      </div>
     </div>
-    <br />
-
-    <div>
-      <label>Modo de saída: </label>
-      <select id="modo">
-        <option value="unico">Arquivo único (.wav)</option>
-        <option value="capitulos">Separado por capítulos</option>
-      </select>
-    </div>
-    <br />
-
-    <div>
-      <label>Motor: </label>
-      <select id="engine">
-        <option value="kokoro">Kokoro-82M</option>
-        <option value="piper">Piper TTS</option>
-      </select>
-    </div>
-    <br />
-
-    <div>
-      <label>Voz (Kokoro): </label>
-      <select id="voz">
-        <option value="pf_dora">pf_dora (Feminino)</option>
-        <option value="pm_alex">pm_alex (Masculino)</option>
-        <option value="pm_santa">pm_santa (Masculino - Grave)</option>
-      </select>
-    </div>
-    <br />
-
-    <div>
-      <label>Velocidade: </label>
-      <input id="velocidade" type="number" step="0.05" min="0.5" max="2.0" value="0.85" />
-    </div>
-    <br />
-
-    <button type="button" id="btn-iniciar">Iniciar Síntese</button>
-
-    <hr />
-
-    <div>
-      <div id="status-texto">Aguardando...</div>
-      <progress id="barra" value="0" max="100" style="width: 100%;"></progress>
-    </div>
-
-    <h4>Logs:</h4>
-    <pre id="logs" style="background: #eee; padding: 8px; height: 180px; overflow-y: auto;"></pre>
-
-    <script type="module" src="/main.js"></script>
+    <script type="module" src="main.js"></script>
   </body>
 </html>

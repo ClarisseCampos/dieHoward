@@ -6,6 +6,12 @@ use std::process::{Command, Stdio};
 use std::thread;
 use tauri::{Emitter, Window};
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 fn encontrar_raiz_projeto() -> PathBuf {
     let mut candidatos = Vec::new();
 
@@ -35,105 +41,200 @@ fn encontrar_raiz_projeto() -> PathBuf {
     PathBuf::from(".")
 }
 
-#[tauri::command]
-fn listar_livros() -> Result<Vec<String>, String> {
-    let pasta_input = encontrar_raiz_projeto().join("data").join("input");
-    let entries = fs::read_dir(&pasta_input)
-        .map_err(|e| format!("Erro ao ler {}: {}", pasta_input.display(), e))?;
+fn encontrar_python(raiz: &Path) -> PathBuf {
+    #[cfg(target_os = "windows")]
+    let venv_py = raiz.join(".venv").join("Scripts").join("python.exe");
 
-    let mut livros = Vec::new();
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.is_file() {
-            if let Some(nome) = path.file_name().and_then(|n| n.to_str()) {
-                if nome.starts_with('.') {
-                    continue;
-                }
-                let lower = nome.to_lowercase();
-                if lower.ends_with(".txt") || lower.ends_with(".pdf") || lower.ends_with(".epub") {
-                    livros.push(nome.to_string());
-                }
-            }
-        }
+    #[cfg(not(target_os = "windows"))]
+    let venv_py = raiz.join(".venv").join("bin").join("python");
+
+    if venv_py.exists() {
+        return venv_py;
     }
-    livros.sort_by_key(|a| a.to_lowercase());
-    Ok(livros)
+
+    #[cfg(target_os = "windows")]
+    {
+        PathBuf::from("python")
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        PathBuf::from("python3")
+    }
+}
+
+fn preparar_comando_python(raiz: &Path) -> Command {
+    let python = encontrar_python(raiz);
+    let mut cmd = Command::new(python);
+    cmd.current_dir(raiz)
+        .arg("app/gui_bridge.py")
+        .env("PYTHONPATH", raiz)
+        .env("PYTHONUTF8", "1")
+        .env("PYTHONIOENCODING", "utf-8");
+
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(CREATE_NO_WINDOW);
+
+    cmd
+}
+
+fn executar_bridge_json(args: &[String]) -> Result<Value, String> {
+    let raiz = encontrar_raiz_projeto();
+    let mut cmd = preparar_comando_python(&raiz);
+    cmd.args(args);
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Falha ao executar o Python: {e}"))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+
+    if !output.status.success() {
+        let detalhe = if !stderr.is_empty() { stderr } else { stdout };
+        return Err(format!("Erro no backend Python: {detalhe}"));
+    }
+
+    if stdout.is_empty() {
+        return Ok(Value::Null);
+    }
+
+    serde_json::from_str(&stdout)
+        .map_err(|e| format!("Resposta inválida do gui_bridge.py: {e}\nSaída: {stdout}"))
+}
+
+#[tauri::command]
+fn obter_configuracoes() -> Result<Value, String> {
+    executar_bridge_json(&["obter-config".to_string()])
+}
+
+#[tauri::command]
+fn salvar_configuracoes(config: Value) -> Result<Value, String> {
+    let payload = serde_json::to_string(&config)
+        .map_err(|e| format!("Erro ao serializar configurações: {e}"))?;
+    executar_bridge_json(&["salvar-config".to_string(), payload])
+}
+
+#[tauri::command]
+fn restaurar_padrao() -> Result<Value, String> {
+    executar_bridge_json(&["restaurar-padrao".to_string()])
+}
+
+#[tauri::command]
+fn listar_livros() -> Result<Value, String> {
+    executar_bridge_json(&["listar-livros".to_string()])
+}
+
+#[tauri::command]
+fn abrir_pasta(caminho: String) -> Result<(), String> {
+    let limpo = caminho.trim();
+    if limpo.is_empty() {
+        return Err("O caminho da pasta está vazio.".to_string());
+    }
+
+    let raiz = encontrar_raiz_projeto();
+    let pasta_bruta = PathBuf::from(limpo);
+    let pasta = if pasta_bruta.is_absolute() {
+        pasta_bruta
+    } else {
+        raiz.join(pasta_bruta)
+    };
+
+    if !pasta.exists() {
+        fs::create_dir_all(&pasta)
+            .map_err(|e| format!("Não foi possível criar a pasta: {e}"))?;
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("explorer")
+            .arg(&pasta)
+            .spawn()
+            .map_err(|e| format!("Falha ao abrir o Explorador de Arquivos: {e}"))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        Command::new("xdg-open")
+            .arg(&pasta)
+            .spawn()
+            .map_err(|e| format!("Falha ao abrir o gerenciador de arquivos: {e}"))?;
+    }
+
+    Ok(())
 }
 
 #[tauri::command]
 fn iniciar_sintese(
     window: Window,
     arquivo: String,
-    modo: String,
+    modo: Option<String>,
     engine: String,
-    voz: String,
-    velocidade: String,
+    voz: Option<String>,
+    velocidade: Option<Value>,
 ) -> Result<(), String> {
     let raiz = encontrar_raiz_projeto();
+    let mut cmd = preparar_comando_python(&raiz);
 
-    let python_venv = if cfg!(target_os = "windows") {
-        raiz.join(".venv").join("Scripts").join("python.exe")
-    } else {
-        raiz.join(".venv").join("bin").join("python")
-    };
+    cmd.arg("sintetizar")
+        .arg("--arquivo")
+        .arg(&arquivo)
+        .arg("--engine")
+        .arg(&engine);
 
-    let python_bin = if python_venv.exists() {
-        python_venv
-    } else {
-        PathBuf::from(if cfg!(target_os = "windows") {
-            "python"
-        } else {
-            "python3"
-        })
-    };
+    if let Some(m) = modo {
+        if !m.trim().is_empty() {
+            cmd.arg("--modo").arg(m);
+        }
+    }
 
-    let caminho_arquivo = if Path::new(&arquivo).is_absolute() {
-        PathBuf::from(&arquivo)
-    } else {
-        raiz.join("data").join("input").join(&arquivo)
-    };
+    if let Some(v) = voz {
+        if !v.trim().is_empty() {
+            cmd.arg("--voz").arg(v);
+        }
+    }
 
-    let script_bridge = raiz.join("app").join("gui_bridge.py");
+    if let Some(vel) = velocidade {
+        let vel_str = match vel {
+            Value::String(s) => s,
+            Value::Number(n) => n.to_string(),
+            other => other.to_string(),
+        };
+        if !vel_str.trim().is_empty() {
+            cmd.arg("--velocidade").arg(vel_str);
+        }
+    }
 
-    thread::spawn(move || {
-        let processo = Command::new(&python_bin)
-            .current_dir(&raiz)
-            .arg(&script_bridge)
-            .arg("--arquivo")
-            .arg(&caminho_arquivo)
-            .arg("--modo")
-            .arg(&modo)
-            .arg("--engine")
-            .arg(&engine)
-            .arg("--voz")
-            .arg(&voz)
-            .arg("--velocidade")
-            .arg(&velocidade)
-            .env("PYTHONPATH", &raiz)
-            .env("PYTHONUTF8", "1")
-            .env("PYTHONIOENCODING", "utf-8")
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn();
+    cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
 
-        match processo {
-            Ok(mut child) => {
-                if let Some(stdout) = child.stdout.take() {
-                    let reader = BufReader::new(stdout);
-                    for linha in reader.lines().map_while(Result::ok) {
-                        let payload: Value = serde_json::from_str(&linha)
-                            .unwrap_or_else(|_| json!({ "tipo": "log", "mensagem": linha }));
-                        let _ = window.emit("diehoward-evento", payload);
+    thread::spawn(move || match cmd.spawn() {
+        Ok(mut child) => {
+            if let Some(stdout) = child.stdout.take() {
+                let reader = BufReader::new(stdout);
+                for linha in reader.lines().map_while(Result::ok) {
+                    let payload: Value = serde_json::from_str(&linha)
+                        .unwrap_or_else(|_| json!({ "tipo": "log", "mensagem": linha }));
+                    let _ = window.emit("diehoward-evento", payload);
+                }
+            }
+            if let Some(stderr) = child.stderr.take() {
+                let reader = BufReader::new(stderr);
+                for linha in reader.lines().map_while(Result::ok) {
+                    if !linha.trim().is_empty() {
+                        let _ = window.emit(
+                            "diehoward-evento",
+                            json!({ "tipo": "log", "mensagem": linha }),
+                        );
                     }
                 }
-                let _ = child.wait();
             }
-            Err(e) => {
-                let _ = window.emit(
-                    "diehoward-evento",
-                    json!({ "tipo": "erro", "mensagem": format!("Falha ao iniciar Python: {}", e) }),
-                );
-            }
+            let _ = child.wait();
+        }
+        Err(e) => {
+            let _ = window.emit(
+                "diehoward-evento",
+                json!({ "tipo": "erro", "mensagem": format!("Falha ao iniciar Python: {e}") }),
+            );
         }
     });
 
@@ -143,7 +244,15 @@ fn iniciar_sintese(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![listar_livros, iniciar_sintese])
+        .plugin(tauri_plugin_dialog::init())
+        .invoke_handler(tauri::generate_handler![
+            obter_configuracoes,
+            salvar_configuracoes,
+            restaurar_padrao,
+            listar_livros,
+            iniciar_sintese,
+            abrir_pasta,
+        ])
         .run(tauri::generate_context!())
         .expect("erro ao executar aplicacao Tauri");
 }
